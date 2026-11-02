@@ -112,9 +112,10 @@ internal static class SettingsPanel
             GUILayout.Label("拖动滑条调整，点「保存并关闭」即时生效并写回 cfg。", _hintStyle);
             GUILayout.Space(8f);
 
-            _maxGuests = Slider("最多显示稀客", _maxGuests, 1, 8);
-            _maxRecipes = Slider("每人最多推荐菜品", _maxRecipes, 1, 8);
-            _maxDrinks = Slider("每人最多推荐酒水", _maxDrinks, 1, 8);
+            // 上限跟 cfg 的 1~10 对齐：以前写死 8，玩家在 cfg 设 9/10 会被这里压回 8（P1-5）
+            _maxGuests = Slider("最多显示稀客", _maxGuests, 1, 10);
+            _maxRecipes = Slider("每人最多推荐菜品", _maxRecipes, 1, 10);
+            _maxDrinks = Slider("每人最多推荐酒水", _maxDrinks, 1, 10);
 
             GUILayout.Space(12f);
             GUILayout.BeginHorizontal();

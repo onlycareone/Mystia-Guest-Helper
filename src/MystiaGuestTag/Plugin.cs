@@ -24,7 +24,7 @@ public class Plugin : BasePlugin
 {
     public const string PluginGuid = "cc.mystia.guesttag";
     public const string PluginName = "Mystia Guest Tag";
-    public const string PluginVersion = "1.2.1";
+    public const string PluginVersion = "1.2.2";
 
     internal static ManualLogSource Logger = null!;
 

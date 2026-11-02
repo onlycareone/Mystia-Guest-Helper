@@ -184,8 +184,11 @@ internal static class SpecialGuestTracking
             // Pointer == 0 说明 native 对象已经销毁，这时候再读任何属性都是访问野内存
             if (guest == null || guest.Pointer == IntPtr.Zero) return null;
 
-            var stringId = SanitizeName(SafeString(() => guest.stringId));
             var id = SafeInt(() => guest.Id);
+            var rawStringId = SanitizeName(SafeString(() => guest.stringId));
+
+            // 读不到 stringId 时用 "#id" 当键：以前空串会让多个未识别稀客挤在同一个键上互相覆盖
+            var stringId = string.IsNullOrEmpty(rawStringId) ? "#" + id : rawStringId;
 
             var fallbackName = SafeString(() =>
             {
@@ -194,7 +197,7 @@ internal static class SpecialGuestTracking
             });
 
             // m03869: name and tags come straight from the runtime object, zero hardcoded tables.
-            var displayName = SanitizeName(fallbackName ?? stringId ?? $"稀客 #{id}");
+            var displayName = SanitizeName(fallbackName ?? stringId);
 
             // like-tags straight from SpecialGuest.LikeFoodTag (real game data)
             var tags = GetOrReadLiveTags(stringId, guest) ?? Array.Empty<string>();

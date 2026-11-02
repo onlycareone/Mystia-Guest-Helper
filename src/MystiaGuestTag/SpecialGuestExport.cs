@@ -34,6 +34,10 @@ internal static class SpecialGuestExport
     private const char BACKSLASH = (char)92;
 
     private static bool _done;
+    private static int _failures;
+
+    /// <summary>导出失败的重试上限：数据没就绪时别一次就把机会用完（但也不能无限重试）。</summary>
+    private const int MaxExportFailures = 5;
     private static bool _initAttempted;
 
     internal static void Install(Harmony harmony)
@@ -145,8 +149,14 @@ internal static class SpecialGuestExport
         }
         catch (Exception ex)
         {
-            Plugin.Logger.LogWarning($"{HarmonyTag} 导出稀客权重数据失败（已忽略）：{ex.GetType().Name}: {ex.Message}");
-            _done = true; // 失败也只尝试一次，别每帧重试
+            _failures++;
+            Plugin.Logger.LogWarning(
+                $"{HarmonyTag} 导出稀客权重数据失败（第 {_failures}/{MaxExportFailures} 次，稍后重试）：{ex.GetType().Name}: {ex.Message}");
+            if (_failures >= MaxExportFailures)
+            {
+                _done = true; // 连续失败才放弃，别每帧重试
+            }
+
             return false;
         }
     }
@@ -421,11 +431,12 @@ internal static class SpecialGuestExport
             }
             else if (ch == NL)
             {
-                sb.Append(ch);
+                // 控制字符不能原样进 JSON（否则名字里有换行就整份 JSON 解析失败）
+                sb.Append(BACKSLASH).Append('n');
             }
             else if (ch == (char)13)
             {
-                sb.Append(ch);
+                sb.Append(BACKSLASH).Append('r');
             }
             else if (ch < (char)0x20)
             {

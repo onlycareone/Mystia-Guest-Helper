@@ -860,9 +860,7 @@ internal static class GuestTagOverlay
             ("bev", "酒水", GuestTagConfig.GetMaxDrinks()),
         };
 
-        const float btn = 18f;
-        const float gap = 3f;
-        var cellWidth = (bar.width - 8f) / 3f;
+        StepperGeometry(bar.width, out var labelWidth, out var btn, out var valueWidth, out var gap, out var cellWidth);
 
         for (var i = 0; i < groups.Length; i++)
         {
@@ -870,12 +868,12 @@ internal static class GuestTagOverlay
             var midY = bar.y + (bar.height - btn) * 0.5f;
 
             GUI.Label(
-                new Rect(cellX, bar.y, 30f, bar.height),
+                new Rect(cellX, bar.y, labelWidth, bar.height),
                 groups[i].Label,
                 _stepLabelStyle);
 
-            var minusRect = new Rect(cellX + 30f, midY, btn, btn);
-            var valueRect = new Rect(minusRect.xMax + gap, bar.y, 22f, bar.height);
+            var minusRect = new Rect(cellX + labelWidth, midY, btn, btn);
+            var valueRect = new Rect(minusRect.xMax + gap, bar.y, valueWidth, bar.height);
             var plusRect = new Rect(valueRect.xMax + gap, midY, btn, btn);
 
             // 自绘按钮 + 手写点击：GUI.Button 在 OnGUI 被多次派发时会重复返回 true（实测一下跳三格）
@@ -1014,27 +1012,53 @@ internal static class GuestTagOverlay
         }
     }
 
+    private static readonly string[] StepperIds = { "guests", "food", "bev" };
+
+    /// <summary>
+    /// 步进条几何：三格平分，格内 [标签][−][数值][+]。
+    /// 面板窄时按钮跟着缩，保证一格的控件不压到下一格（以前固定 30+18+22+18+间距≈94px，
+    /// PanelWidth 下限 220 时一格只有 ~71px，+ 号会落到下一格的标签上，点错按钮）。
+    /// </summary>
+    private static void StepperGeometry(
+        float barWidth,
+        out float labelWidth,
+        out float btn,
+        out float valueWidth,
+        out float gap,
+        out float cellWidth)
+    {
+        gap = 3f;
+        valueWidth = 22f;
+        btn = 18f;
+        labelWidth = 30f;
+        cellWidth = (barWidth - 8f) / 3f;
+
+        var needed = labelWidth + btn + gap + valueWidth + gap + btn;
+        if (needed <= cellWidth - 2f) return;
+
+        // 压缩顺序：标签先让到 20，再按剩余空间平均压两个按钮
+        labelWidth = Mathf.Clamp(cellWidth * 0.28f, 18f, 30f);
+        btn = Mathf.Clamp((cellWidth - labelWidth - valueWidth - gap * 2f - 2f) * 0.5f, 10f, 18f);
+    }
+
     /// <summary>命中测试：把步进条切成三格，每格 [−][数值][+]，返回如 "guests+"。</summary>
     private static string? HitStepper(Rect bar, Vector2 mouse, Rect strategyBar)
     {
         if (strategyBar.Contains(mouse)) return "strategy";
 
-        var groups = new[] { "guests", "food", "bev" };
-        const float btn = 18f;
-        const float gap = 3f;
-        var cellWidth = (bar.width - 8f) / 3f;
+        StepperGeometry(bar.width, out var labelWidth, out var btn, out var valueWidth, out var gap, out var cellWidth);
 
-        for (var i = 0; i < groups.Length; i++)
+        for (var i = 0; i < StepperIds.Length; i++)
         {
             var cellX = bar.x + 4f + cellWidth * i;
             var midY = bar.y + (bar.height - btn) * 0.5f;
 
-            var minusRect = new Rect(cellX + 30f, midY, btn, btn);
-            var valueRect = new Rect(minusRect.xMax + gap, bar.y, 22f, bar.height);
+            var minusRect = new Rect(cellX + labelWidth, midY, btn, btn);
+            var valueRect = new Rect(minusRect.xMax + gap, bar.y, valueWidth, bar.height);
             var plusRect = new Rect(valueRect.xMax + gap, midY, btn, btn);
 
-            if (minusRect.Contains(mouse)) return groups[i] + "-";
-            if (plusRect.Contains(mouse)) return groups[i] + "+";
+            if (minusRect.Contains(mouse)) return StepperIds[i] + "-";
+            if (plusRect.Contains(mouse)) return StepperIds[i] + "+";
         }
 
         return null;
@@ -1522,7 +1546,7 @@ internal static class GuestTagOverlay
             hash = unchecked(hash * 31 + ch);
         }
 
-        var index = Math.Abs(hash) % NameColors.Length;
+        var index = (hash & 0x7fffffff) % NameColors.Length; // Math.Abs(int.MinValue) 会抛 OverflowException
         return NameColors[index];
     }
 

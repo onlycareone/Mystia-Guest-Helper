@@ -89,6 +89,9 @@ internal static class RecipeRecommender
     }
 
     private static readonly Dictionary<string, CacheEntry> Cache = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>缓存条目上限：key 里带预算和策略，长夜里会一直增殖，必须有淘汰（P2-1）。</summary>
+    private const int MaxCacheEntries = 256;
     private static readonly object CacheGate = new();
     private static bool _dailyMenuFailureLogged;
     private static bool _allRecipesFailureLogged;
@@ -291,6 +294,22 @@ internal static class RecipeRecommender
     {
         lock (CacheGate)
         {
+            if (Cache.Count >= MaxCacheEntries && !Cache.ContainsKey(key))
+            {
+                var now = DateTime.UtcNow;
+                foreach (var expired in Cache.Where(p => now - p.Value.CreatedUtc > CacheTtl)
+                             .Select(p => p.Key).ToList())
+                {
+                    Cache.Remove(expired);
+                }
+
+                while (Cache.Count >= MaxCacheEntries)
+                {
+                    var oldest = Cache.OrderBy(p => p.Value.CreatedUtc).First().Key;
+                    Cache.Remove(oldest);
+                }
+            }
+
             Cache[key] = new CacheEntry(result);
         }
     }
@@ -1248,7 +1267,8 @@ internal static class RecipeRecommender
                 var text = recipe.GetCookCountNum();
                 if (!string.IsNullOrEmpty(text))
                 {
-                    var digits = new string(text!.Where(char.IsDigit).ToArray());
+                    // 只取第一段数字：「可做 3 份，还剩 2 次」拼成 32 会把份数放大（P1-4）
+                    var digits = new string(text!.SkipWhile(ch => !char.IsDigit(ch)).TakeWhile(char.IsDigit).ToArray());
                     if (digits.Length > 0 && int.TryParse(digits, out var fromGame) && fromGame > 0)
                     {
                         return Math.Min(fromGame, 99);
@@ -1624,10 +1644,8 @@ internal static class RecipeRecommender
             // m03632：只在「吧台里真有酒」的里面挑（RunTimeStorage.Beverages）。
             // 库存为 0 的一律不露面——玩家手里没这瓶酒，推荐了也端不出来。
             var stocked = ReadBeverageStockSnapshot();
-            if (stocked.Count > 0)
-            {
-                _beverageStockSnapshot = stocked;
-            }
+            // 无条件覆盖：吧台空了也要清掉上一晚的快照，否则还在按旧库存推荐（P2-2）
+            _beverageStockSnapshot = stocked;
 
             if (stocked.Count > 0)
             {
