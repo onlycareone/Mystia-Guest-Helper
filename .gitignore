@@ -1,0 +1,50 @@
+# ===== .NET / C# 编译产物（本项目真正的脏东西就这三类）=====
+bin/
+obj/
+src/**/bin/
+src/**/obj/
+
+# 编译生成的程序集 / 符号 / 包
+*.dll
+*.pdb
+*.exe
+*.nupkg
+*.snupkg
+
+# ===== MSBuild / NuGet 中间文件 =====
+*.AssemblyInfo.cs
+*.AssemblyInfoInputs.cache
+*.assets.cache
+*.CoreCompileInputs.cache
+*.csproj.AssemblyReference.cache
+*.csproj.CoreCompileInputs.cache
+*.csproj.FileListAbsolute.txt
+*.csproj.nuget.dgspec.json
+*.csproj.nuget.g.props
+*.csproj.nuget.g.targets
+*.GeneratedMSBuildEditorConfig.editorconfig
+project.assets.json
+project.nuget.cache
+
+# ===== IDE / 编辑器 =====
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.DotSettings.user
+*.swp
+*~
+
+# ===== 系统杂物 =====
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# ===== 本地调试残留（发布包里不需要，也绝不提交）=====
+_downloads/
+_tmp/
+*.log
+*.tmp
+
+# 注意：GuestTag.zip 是给玩家的发布产物，故意不忽略它；不要把 *.zip 写进来。

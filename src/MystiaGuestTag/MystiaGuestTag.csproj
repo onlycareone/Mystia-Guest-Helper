@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- 游戏自带 coreclr 为 .NET 6.0.7（BepInEx/dotnet/Microsoft.NETCore.App.deps.json），插件必须同目标框架 -->
+    <TargetFramework>net6.0</TargetFramework>
+    <AssemblyName>MystiaGuestTag</AssemblyName>
+    <RootNamespace>MystiaGuestTag</RootNamespace>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Version>0.1.0</Version>
+
+    <!-- 游戏安装目录，可 /p:GameDir=... 覆盖 -->
+    <GameDir Condition="'$(GameDir)'==''">E:\SteamLibrary\steamapps\common\Touhou Mystia Izakaya</GameDir>
+    <BepInExDir>$(GameDir)\BepInEx</BepInExDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- BepInEx 6 IL2CPP 核心运行时（游戏目录自带，不随插件分发） -->
+    <Reference Include="$(BepInExDir)\core\*.dll">
+      <Private>false</Private>
+    </Reference>
+    <!-- Il2CppInterop 生成的游戏互操作程序集（首次启动游戏后出现在 interop/） -->
+    <Reference Include="$(BepInExDir)\interop\*.dll">
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <!-- 构建后自动部署到游戏插件目录（BepInEx 会递归加载 plugins 子目录） -->
+  <Target Name="DeployToGame" AfterTargets="Build" Condition="Exists('$(BepInExDir)\plugins')">
+    <MakeDir Directories="$(BepInExDir)\plugins\MystiaGuestTag" />
+    <!-- 某些受限环境下 MSBuild 覆盖写入游戏目录会被拒（bash/PowerShell 复制正常），
+         失败只警告不中断：用 tools/deploy.sh 兜底复制即可。 -->
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(BepInExDir)\plugins\MystiaGuestTag"
+          ContinueOnError="WarnAndContinue" />
+    <Message Text="部署目标: $(BepInExDir)\plugins\MystiaGuestTag（若上面有 Access denied 警告，请运行 tools/deploy.sh）" Importance="high" />
+  </Target>
+
+</Project>
