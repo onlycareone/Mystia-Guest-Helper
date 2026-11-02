@@ -100,6 +100,62 @@ internal static class RecipeRecommender
     private static readonly HashSet<string> _bevNoMatchLogged = new(StringComparer.OrdinalIgnoreCase);
     private static readonly object _noMatchGate = new();
 
+    /// <summary>
+    /// Read the guest's weighted like-tags: SpecialGuest.likeFoodTag / likeBevTag are
+    /// WeightedTag[] (tagId + weight). This is real game data: higher weight = wants it more.
+    /// </summary>
+    private static Dictionary<int, int> ReadWeightedTags(Il2CppReferenceArray<SpecialGuest.WeightedTag>? tags)
+    {
+        var map = new Dictionary<int, int>();
+        if (tags == null) return map;
+
+        try
+        {
+            foreach (var weighted in tags)
+            {
+                if (weighted == null) continue;
+
+                var tagId = SafeInt(() => weighted.tagId);
+                if (tagId <= 0) continue;
+
+                var weight = SafeInt(() => weighted.weight);
+                if (weight <= 0) weight = 1;
+
+                if (!map.TryGetValue(tagId, out var old) || weight > old) map[tagId] = weight;
+            }
+        }
+        catch
+        {
+            // no weights available -> caller falls back to 1 point per matched tag
+        }
+
+        return map;
+    }
+
+    private static Il2CppReferenceArray<SpecialGuest.WeightedTag>? SafeWeightedFoodTags(SpecialGuest guest)
+    {
+        try
+        {
+            return guest.likeFoodTag;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static Il2CppReferenceArray<SpecialGuest.WeightedTag>? SafeWeightedBeverageTags(SpecialGuest guest)
+    {
+        try
+        {
+            return guest.likeBevTag;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
     internal static void ClearCache()
     {
         lock (CacheGate)
@@ -116,15 +172,13 @@ internal static class RecipeRecommender
         var key = (stringId ?? string.Empty) + "@" + budget + "#" + GuestTagConfig.GetStrategy();
         if (TryGetCached(key, out var cached)) return cached;
 
-        var result = ComputeWithCuratedTable(guest, stringId ?? string.Empty, key, budget, beverage: false);
+        var result = GuardedCompute(guest, stringId ?? string.Empty, key, budget, beverage: false);
         StoreCache(key, result);
         return result;
     }
 
-    /// <summary>
-    /// 查表优先（m03044）：名单里这一档有菜就直接按名单出，名单为空或全被预算挡掉才退回动态计算。
-    /// </summary>
-    private static RecommendationResult ComputeWithCuratedTable(
+    /// <summary>推荐计算的异常壳：算挂了只记一条警告并返回「无匹配」，绝不抛回游戏。</summary>
+    private static RecommendationResult GuardedCompute(
         SpecialGuest guest,
         string stringId,
         string key,
@@ -133,7 +187,7 @@ internal static class RecipeRecommender
     {
         try
         {
-            return ComputeWithCuratedTableCore(guest, stringId, key, budget, beverage);
+            return GuardedComputeCore(guest, stringId, key, budget, beverage);
         }
         catch (Exception ex)
         {
@@ -143,53 +197,16 @@ internal static class RecipeRecommender
         }
     }
 
-    private static RecommendationResult ComputeWithCuratedTableCore(
+    private static RecommendationResult GuardedComputeCore(
         SpecialGuest guest,
         string stringId,
         string key,
         int budget,
         bool beverage)
     {
-        var strategy = GuestTagConfig.GetStrategy();
-        var names = beverage
-            ? CuratedRecommendations.LookupDrinks(stringId, strategy)
-            : CuratedRecommendations.LookupFood(stringId, strategy);
-
-        // m03399：高价优先必须给「预算内最贵」的菜，名单只有两三条根本做不到，
-        // 所以这一档直接交给动态排序（候选池已经是「现在做得出」的菜）。
-        // m03688：查表名单只是「可选提示」，默认关闭 —— 默认走纯标签/预算/食材/厨具的动态过滤，
-        // 这样以后游戏出任何新 DLC 稀客都不需要改代码。
-        if (GuestTagConfig.UseCuratedHints.Value && strategy != RecommendStrategy.PriceHigh && names.Length > 0)
-        {
-            var allowed = beverage
-                ? CollectStockedBeverageNames()
-                : CollectAvailableFoodNames();
-
-            var curated = ResolveCurated(names, strategy, budget, beverage, allowed);
-            if (curated.HasMatch)
-            {
-                // 名单只有两三条：剩下的位置用动态结果补满，别让「最多 3 条」变成只有 1 条
-                var dynamicResult = beverage
-                    ? ComputeBeverages(guest, key, null, budget)
-                    : Compute(guest, key, budget);
-
-                var merged = curated.Items
-                    .Concat(dynamicResult.HasMatch ? dynamicResult.Items : Array.Empty<string>())
-                    .Distinct(StringComparer.Ordinal)
-                    .Take(GuestTagConfig.GetMaxRecipes())
-                    .ToArray();
-
-                Plugin.Logger.LogDebug(
-                    $"{HarmonyTag} 稀客 [{stringId}] 命中查表名单（{GuestTagConfig.StrategyDisplayName(strategy)}）：" +
-                    $"{string.Join(" / ", merged)}");
-
-                return RecommendationResult.With(merged, curated.Label);
-            }
-
-            Plugin.Logger.LogDebug(
-                $"{HarmonyTag} 稀客 [{stringId}] 的查表名单在 {GuestTagConfig.StrategyDisplayName(strategy)} 下被过滤光了，退回动态计算");
-        }
-
+        // m03869: no curated table, no hardcoded data. The recommendation comes only from
+        // dishes the player can actually serve right now + the guest's weighted like-tags
+        // (SpecialGuest.WeightedTag) + budget + cookware. New DLC guests need no code change.
         return beverage ? ComputeBeverages(guest, key, null, budget) : Compute(guest, key, budget);
     }
 
@@ -286,7 +303,16 @@ internal static class RecipeRecommender
         try
         {
             var likeIds = ReadLikeTags(guest);
-            if (likeIds.Count == 0) return RecommendationResult.NoPreference;
+
+            // m03869: prefer the game's weighted tags; fall back to 1 point per tag.
+            var likeWeights = ReadWeightedTags(SafeWeightedFoodTags(guest));
+            if (likeWeights.Count == 0)
+            {
+                likeWeights = new Dictionary<int, int>();
+                foreach (var tagId in likeIds) likeWeights[tagId] = 1;
+            }
+
+            if (likeWeights.Count == 0) return RecommendationResult.NoPreference;
 
             var hateIds = ReadHateTags(guest);
 
@@ -311,7 +337,20 @@ internal static class RecipeRecommender
             var seenNames = new HashSet<string>(StringComparer.Ordinal);
             var scanned = candidates.Count;
 
-            ScoreCandidates(candidates, likeIds, hateIds, scored, seenNames);
+            ScoreCandidates(candidates, likeWeights, hateIds, scored, seenNames);
+
+            // m03869：把「权重得分」打印出来，方便一眼确认推荐到底是按游戏权重算的，
+            // 不是硬编码名单（权重 = 每个命中喜好标签的 weight 之和）。
+            if (scored.Count > 0)
+            {
+                var preview = scored
+                    .OrderByDescending(x => x.Score)
+                    .Take(3)
+                    .Select(x => $"{x.Name} 权重{x.Score / 10}+{x.Score % 10}命中 ¥{x.Price}");
+
+                Plugin.Logger.LogDebug(
+                    $"{HarmonyTag} 稀客 [{logId}] 权重打分前 3：{string.Join(" / ", preview)}");
+            }
 
             // m03399：冴月麟那种「菜单里没有合口味的菜」以前直接摆烂显示无匹配。
             // 现在放宽成：只要不带厌恶标签、价格读得到就给（排序仍按策略）。
@@ -972,7 +1011,7 @@ internal static class RecipeRecommender
     /// <summary>按「喜好命中 ×2、讨厌命中 ×3 扣分」给候选菜打分，只把正分菜收进 <paramref name="scored"/>。</summary>
     private static void ScoreCandidates(
         List<Recipe> candidates,
-        HashSet<int> likeIds,
+        IReadOnlyDictionary<int, int> likeWeights,
         HashSet<int> hateIds,
         List<(int Score, string Name, int Price, int Ingredients)> scored,
         HashSet<string> seenNames)
@@ -989,16 +1028,27 @@ internal static class RecipeRecommender
                 var dishTags = ReadTagArray(food.Tags);
                 if (dishTags.Count == 0) continue;
 
-                var likeHits = dishTags.Count(tag => likeIds.Contains(tag));
+                // m03869: weighted score. The game gives each like-tag a weight (1,2,3..),
+                // sum them up; if no weight data, every matched tag counts as 1.
+                var weightSum = 0;
+                var likeHits = 0;
+                foreach (var tag in dishTags)
+                {
+                    if (!likeWeights.TryGetValue(tag, out var weight)) continue;
+
+                    likeHits++;
+                    weightSum += weight > 0 ? weight : 1;
+                }
+
                 if (likeHits == 0) continue;
 
                 var hateHits = hateIds.Count == 0 ? 0 : dishTags.Count(tag => hateIds.Contains(tag));
 
-                // 带讨厌标签的菜一律不进池子：稀客吃到厌恶的东西会掉好感，
-                // 以前只扣 3 分，两个喜好标签就能把分数顶回正数（m02908 修掉）。
+                // any hated tag disqualifies the dish entirely
                 if (hateHits > 0) continue;
 
-                var score = likeHits * 2 - hateHits * 3;
+                // weight * 10 + hit count: heavier tags win, more hits break ties
+                var score = weightSum * 10 + likeHits;
                 if (score <= 0) continue;
 
                 var name = ReadName(food);
@@ -1062,6 +1112,19 @@ internal static class RecipeRecommender
         catch (Exception ex)
         {
             Plugin.Logger.LogDebug($"{HarmonyTag} 价格阶梯诊断失败（忽略）：{ex.Message}");
+        }
+    }
+
+    /// <summary>读一次 int，任何异常都当 0（IL2CPP 对象被销毁后再读会抛）。</summary>
+    private static int SafeInt(Func<int> read)
+    {
+        try
+        {
+            return read();
+        }
+        catch
+        {
+            return 0;
         }
     }
 
@@ -1496,7 +1559,7 @@ internal static class RecipeRecommender
         var key = "bev:" + (stringId ?? string.Empty) + "@" + budget + "#" + GuestTagConfig.GetStrategy();
         if (TryGetCached(key, out var cached)) return cached;
 
-        var result = ComputeWithCuratedTable(guest, stringId ?? string.Empty, key, budget, beverage: true);
+        var result = GuardedCompute(guest, stringId ?? string.Empty, key, budget, beverage: true);
         StoreCache(key, result);
         return result;
     }
@@ -1539,7 +1602,6 @@ internal static class RecipeRecommender
         {
             var likeNames = new HashSet<string>(StringComparer.Ordinal);
 
-            // 1) 游戏运行时数据优先
             try
             {
                 foreach (var tagName in ReadTagNames(guest.LikeBevTag))
@@ -1549,19 +1611,12 @@ internal static class RecipeRecommender
             }
             catch
             {
-                // LikeBevTag 读不到就往下走硬编码
+                // tag names unavailable -> rely on weighted ids below
             }
 
-            // 2) 硬编码兜底
-            if (likeNames.Count == 0 && hardcodedTags != null)
-            {
-                foreach (var tagName in hardcodedTags)
-                {
-                    if (!string.IsNullOrWhiteSpace(tagName)) likeNames.Add(tagName);
-                }
-            }
-
-            if (likeNames.Count == 0) return RecommendationResult.NoPreference;
+            // m03869: weighted beverage tags (likeBevTag WeightedTag[]), no hardcoded fallback.
+            var bevWeights = ReadWeightedTags(SafeWeightedBeverageTags(guest));
+            if (likeNames.Count == 0 && bevWeights.Count == 0) return RecommendationResult.NoPreference;
 
             var (candidates, source) = CollectBeverageCandidates();
             if (candidates.Count == 0) return RecommendationResult.NoMatch;
@@ -1605,13 +1660,28 @@ internal static class RecipeRecommender
 
                 try
                 {
-                    var drinkTags = ReadTagNames(drink.Tags);
-                    if (drinkTags.Count == 0) continue;
+                    // m03869: weighted score via likeBevTag tagId->weight against the drink's Tags;
+                    // when the game gives no weights, fall back to matching tag names.
+                    var weightSum = 0;
+                    var hits = 0;
+                    if (bevWeights.Count > 0)
+                    {
+                        foreach (var tagId in ReadTagArray(drink.Tags))
+                        {
+                            if (!bevWeights.TryGetValue(tagId, out var weight)) continue;
 
-                    var hits = drinkTags.Count(tag => likeNames.Contains(tag));
+                            hits++;
+                            weightSum += weight > 0 ? weight : 1;
+                        }
+                    }
+                    else
+                    {
+                        var drinkTags = ReadTagNames(drink.Tags);
+                        if (drinkTags.Count == 0) continue;
 
-                    // m03303：高价优先时「不踩厌恶的贵酒」也能推（hits=0 也留下）；
-                    // 低价 / 少料易做仍然只推合口味的。
+                        hits = drinkTags.Count(tag => likeNames.Contains(tag));
+                    }
+
                     if (hits == 0 && GuestTagConfig.GetStrategy() != RecommendStrategy.PriceHigh) continue;
 
                     var name = ReadName(drink);
@@ -1622,7 +1692,7 @@ internal static class RecipeRecommender
                     var drinkPrice = ReadPrice(name!, drink);
                     if (drinkPrice <= 0) continue;
 
-                    scored.Add((hits * 2, name!, drinkPrice, 0));
+                    scored.Add((weightSum > 0 ? weightSum * 10 + hits : hits * 2, name!, drinkPrice, 0));
                 }
                 catch
                 {

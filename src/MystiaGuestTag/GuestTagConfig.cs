@@ -31,9 +31,6 @@ internal static class GuestTagConfig
     internal static ConfigEntry<int> PanelWidth = null!;
     internal static ConfigEntry<int> FontSize = null!;
 
-    /// <summary>是否启用内置查表名单（m03688，默认 false = 纯动态）。</summary>
-    internal static ConfigEntry<bool> UseCuratedHints = null!;
-
     /// <summary>厨具手填兜底开关（m03688）。</summary>
     internal static ConfigEntry<bool> UseCookwareOverride = null!;
 
@@ -156,14 +153,6 @@ internal static class GuestTagConfig
             "UI_X",
             -1,
             "面板左上角 X 坐标（拖动面板标题栏后会自动写回这里；-1 = 按 Corner 自动算）");
-
-        UseCuratedHints = config.Bind(
-            "Display",
-            "UseCuratedHints",
-            false,
-            "是否使用内置的「夜雀食堂小助手」查表名单（魔理沙/莉格露/露米娅/阿求/橙）。"
-            + "默认 false = 完全按稀客的喜好标签 + 预算 + 食材 + 厨具动态过滤，新 DLC 稀客无需改代码；"
-            + "改成 true 时，低价优先/少料易做会优先采用名单里的菜（仍然受预算与食材约束）。");
 
         UseCookwareOverride = config.Bind(
             "Cookware",

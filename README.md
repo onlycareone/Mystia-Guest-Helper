@@ -1,8 +1,9 @@
 # MystiaGuestTag — 东方夜雀食堂稀客喜好标签插件
 
 营业时自动识别进店稀客，在屏幕角落用带黑底（默认 70% 不透明）的面板显示：
-**稀客名字（加粗+按人上色）、喜好/厌恶标签、以及按喜好算出的高价/低价推荐菜品与酒水**。
-3 个指定稀客用硬编码标签，其余稀客自动退回游戏运行时数据（`LikeFoodTag` / `GetFoodTagText`）。
+**稀客名字、喜好/厌恶标签、预算，以及按策略排好的推荐菜品与酒水**。
+**没有任何硬编码名单**：名字、喜好/厌恶、预算、菜单、食材、厨具全部运行时从游戏对象读；推荐按游戏自带的
+加权喜好标签（`SpecialGuest.WeightedTag`，`tagId` + `weight`）算「权重得分」排序。
 默认停靠**右下角**（右上角被游戏自带的传菜/酒水/厨师 HUD 占着），可在配置文件里改。
 
 - 游戏版本：4.4.0e（Unity 2021.3.28f1，IL2CPP metadata v29）
@@ -11,7 +12,7 @@
 
 ## 给玩家：怎么装（三种情况）
 
-只想玩游戏、不打算编译的，看这一节就够。装好后的效果：营业时屏幕右下角出现稀客面板，显示进店稀客的名字、喜好/厌恶标签和高低价推荐菜。
+只想玩游戏、不打算编译的，看这一节就够。装好后的效果：营业时屏幕右下角出现稀客面板，显示进店稀客的名字、喜好/厌恶标签、预算和按策略排好的推荐菜/酒。
 
 ### 情况 A：从没装过 BepInEx（全新游戏目录）
 
@@ -59,7 +60,6 @@ MystiaGuestTag/
 │  ├─ MystiaGuestTag.csproj      # 引用 $(GameDir)\BepInEx\{core,interop}\*.dll
 │  ├─ Plugin.cs                  # [BepInPlugin] 入口，注册两个 Harmony Hook
 │  ├─ SpecialGuestTracking.cs    # Hook 稀客生成，读 stringId / Id
-│  ├─ GuestTagDatabase.cs        # 硬编码的 3 个稀客喜好标签字典
 │  ├─ GuestTagOverlay.cs         # Hook 营业场景 OnGUI，画面板（角落/字号/透明度可配）
 │  ├─ GuestTagConfig.cs          # BepInEx 配置项（角落、宽度、字号、底框透明度）
 │  ├─ RecipeRecommender.cs       # 按喜好标签给当晚菜单打分，算推荐菜品
@@ -109,35 +109,36 @@ NightScene.GuestManagementUtility.GuestsManager.SpawnSpecialGuestGroup(int id, .
 
 营业场景的稀客由 `GuestsManager.SpawnSpecialGuestGroup` 生成，故 Hook 点选它。
 
-## 硬编码喜好标签
+## 喜好数据全部来自游戏（v1.2.0）
 
-| stringId | 名称 | 喜好标签（食物） | 喜好标签（酒水，按人设推） |
-| --- | --- | --- | --- |
-| `Wriggle` | 莉格露 | 甜 / 猎奇 / 生 / 肉 | 甘 / 水果 / 低酒精 / 气泡 |
-| `Akyuu`（兼容 `Akyu`） | 阿求 | 汤羹 / 清淡 / 甜 / 和风 / 文化底蕴 | 无酒精 / 甘 / 古典 / 可加热 |
-| `Rumia` | 露米娅 | 猎奇 / 肉 / 招牌 / 生 / 饱腹 | 高酒精 / 辛 / 烧酒 / 直饮 |
-
-匹配时统一小写并去掉非字母数字字符，避免拼写差异漏识别。
-
-**酒水那列是推断的，不是从游戏数据里读的**：运行时只要 `SpecialGuest.LikeBevTag` 读得出来，
-就以游戏数据为准（见「推荐酒水」一节），硬编码只做读不到时的兜底，所以推错也不会显示错。
-
-酒水标签取值来自游戏内真实标签（对照 BWIKI 酒水一览的 Tag 过滤器）：
-无酒精 / 低酒精 / 中酒精 / 高酒精 / 可加冰 / 可加热 / 烧酒 / 清酒 / 鸡尾酒 / 西洋酒 /
-利口酒 / 啤酒 / 直饮 / 水果 / 甘 / 辛 / 苦 / 气泡 / 古典 / 现代 / 提神。
-
-## 未硬编码稀客的兜底：读运行时标签
-
-面板不只认那 3 个：未命中的稀客会退到游戏自己的数据 ——
+代码里没有任何稀客名单、菜谱表或价格表。每个稀客的喜好都从游戏对象读：
 
 ```csharp
-guest.LikeFoodTag            // int[]，喜好标签 id 数组
-guest.GetFoodTagText(int id) // 标签 id → 当前语言文本
+guest.stringId                      // 内部名（日志/缓存 key）
+controller.OnGetGuestName()         // 当前语言的本地化名字
+guest.likeFoodTag                   // Il2CppReferenceArray<SpecialGuest.WeightedTag>，tagId + weight
+guest.likeBevTag                    // 同上，酒水标签
+guest.LikeFoodTag                   // int[]，展开后的标签 id（读不到权重时用它兜底）
+guest.HateFoodTagOriginal           // int[]，厌恶标签
+controller.MaxFundCarry             // 这位客人这顿最多能掏出多少钱
 ```
 
-结果按 `stringId` 缓存在 `SpecialGuestTracking.LiveTagCache`（`RefreshPresent()` 每帧都会调用
-`Record()`，不缓存的话每帧都会走一遍 IL2CPP 取文本）。读不到时面板显示「喜好未收录（stringId = …）」，
-日志同时留一行 `发现未收录稀客`，方便把 stringId 补进硬编码表。
+### 权重得分怎么算
+
+1. 候选池：`IzakayaConfigure.DailyRecipes`（今日菜单）→ 没有就 `RunTimeStorage.Recipes`（已解锁），
+   再按 `RunTimeStorage.Ingredients` / `RunTimeStorage.Foods` 判「现在能不能做出来」，
+   最后按 `CookController.Cooker.Type` 过滤没带对应厨具的菜。
+2. 打分：`score = Σ(命中喜好标签的 weight) × 10 + 命中标签数`；带任何厌恶标签的菜**直接剔除**。
+   `weight` 是游戏数据（1/2/3…），读不到时退化成「每个命中 1 分」。
+3. 排序：按你选的策略排（低价优先 / 高价优先 / 少料易做），再按预算截断。
+
+代码位置：`RecipeRecommender.ReadWeightedTags()` / `ScoreCandidates()`。
+想把打分打出来看，把 `BepInEx/config/BepInEx.cfg` 的 `[Logging.Disk] LogLevels` 加上 `Debug`，
+营业时日志里会有：
+
+```
+[GuestTag] 稀客 [Marisa] 权重打分前 3：豚骨拉面 权重7+1命中 ¥60 / 力量汤 权重5+1命中 ¥34
+```
 
 ## UI 布局与配置
 
@@ -256,7 +257,6 @@ score    = likeHits * 2 - hateHits * 3           // 只保留 >0
 ```csharp
 guest.LikeBevTag                                   // Il2CppStructArray<int>，酒水喜好标签 id
 DataBaseLanguage.GetBeverageTag(int id)            // 标签 id → 短名（「甘」「无酒精」这种）
-// 读不到时退回 GuestTagDatabase 里硬编码的那份（按人设推的）
 ```
 
 打分比菜品简单（`SpecialGuest.HateBevTag` 是 `IEnumerable<int>`，同样不能 foreach，本版先不用它）：
@@ -343,7 +343,7 @@ score     = likeHits * 2                     // 只保留 >0
    - 连续识别到进店稀客：`Marisa`(Id=10)、`MengChengGuo`(Id=30)、`Ushio`(Id=37)、`Chen`(Id=2)
    - 说明 Hook 与面板链路在真实营业里全部走通。
 5. 若有稀客连运行时标签都读不到，日志里会有
-   `[GuestTag] 发现未收录稀客：stringId="..." Id=... 本地化名="..."`，把该 stringId 补进 `GuestTagDatabase.Table` 即可。
+   `[GuestTag] 发现未收录稀客：stringId="..." Id=... 本地化名="..."`，说明运行时没读到喜好标签（面板会显示「数据未收录」）。
 
 ## TODO
 
@@ -422,6 +422,15 @@ score     = likeHits * 2                     // 只保留 >0
 - **滚轮循环**：`HandleWheel` 只认方向、步长恒为 1，`_windowOffset = ((_windowOffset + step) % span + span) % span`——滚到底再滚回顶部，滚到顶再滚跳到底部，也不会因为一次 `delta.y = ±2` 一下翻两位。
 - **合并档也守条数**：`SplitByPrice` 的合并分支（匹配数 ≤ 阈值）按价格从高到低 `Take(mergeLimit)`，`mergeLimit = Math.Max(1, Math.Min(perGroup, hardMaxHigh + hardMaxLow))`，不会超过顶部「菜品」设定。
 - **离店即时移除**：`PruneAbsent` 配合 `PresentGrace = 2s`，稀客一走那一块立刻消失，全员离店面板自动隐藏。
+
+### v1.2.0（当前版本）：删掉硬编码 + 改用游戏权重打分
+
+- 删除 `CuratedRecommendations.cs`（「夜雀食堂小助手」查表名单）与 `GuestTagDatabase.cs`（3 个稀客的名字/标签表），
+  连 `UseCuratedHints` 配置项一起移除。代码里再无任何稀客名、菜名、价格。
+- 新增 `RecipeRecommender.ReadWeightedTags()`：读 `SpecialGuest.likeFoodTag` / `likeBevTag` 的
+  `WeightedTag(tagId, weight)`，打分改成 `Σweight × 10 + 命中数`，厌恶标签一票否决。
+- 日志新增 `权重打分前 3：…`（Debug 级），方便核对打分来源。
+- 说明：下面从「v1.4.0：查表法」开始的历史小节记录的是**已被删除**的旧实现，留作演进记录。
 
 ### v1.4.0：查表法 + 稳定性重写（用户 m03044 / m03065）
 

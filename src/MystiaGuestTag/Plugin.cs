@@ -24,7 +24,7 @@ public class Plugin : BasePlugin
 {
     public const string PluginGuid = "cc.mystia.guesttag";
     public const string PluginName = "Mystia Guest Tag";
-    public const string PluginVersion = "1.1.0";
+    public const string PluginVersion = "1.2.0";
 
     internal static ManualLogSource Logger = null!;
 
@@ -38,7 +38,6 @@ public class Plugin : BasePlugin
         var harmony = new Harmony(PluginGuid);
 
         // Hook 点 1：稀客生成（营业场景顾客生成逻辑）——本插件的主取数点
-        CuratedRecommendations.Initialize();
         SpecialGuestTracking.Install(harmony);
 
         // Hook 点 2：营业场景的常驻 OnGUI —— 面板绘制点

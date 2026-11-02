@@ -193,17 +193,11 @@ internal static class SpecialGuestTracking
                 return string.IsNullOrWhiteSpace(name) ? null : name;
             });
 
-            GuestTagDatabase.Entry entry = default;
-            var known = GuestTagDatabase.TryGet(stringId, out entry);
+            // m03869: name and tags come straight from the runtime object, zero hardcoded tables.
+            var displayName = SanitizeName(fallbackName ?? stringId ?? $"稀客 #{id}");
 
-            var displayName = SanitizeName(
-                known && entry.Name != null ? entry.Name : (fallbackName ?? stringId ?? $"稀客 #{id}"));
-
-            // m03688：**运行时数据优先**——喜好标签直接读 SpecialGuest.LikeFoodTag，
-            // 硬编码那三条只在运行时读不到时兜底（以前是硬编码优先，游戏改了设定就会显示错）。
-            // 这样以后出任何新 DLC 稀客都不需要改代码：读到什么就显示什么。
-            var liveTags = GetOrReadLiveTags(stringId, guest);
-            var tags = liveTags ?? (known ? entry.Tags : null);
+            // like-tags straight from SpecialGuest.LikeFoodTag (real game data)
+            var tags = GetOrReadLiveTags(stringId, guest) ?? Array.Empty<string>();
 
             // 厌恶标签：读 SpecialGuest.HateFoodTagOriginal（Il2CppStructArray<int>）。
             // 注意：HateFoodTag 是 Il2CppSystem 的 IEnumerable<int>，C# 里 foreach 会报 CS0117/CS0202，别用。
@@ -224,7 +218,7 @@ internal static class SpecialGuestTracking
             var beverage = RecipeRecommender.RecommendBeverages(
                 guest,
                 stringId ?? string.Empty,
-                liveTags != null ? null : (known ? entry.BeverageTags : null),
+                null,
                 budget);
 
             // 同一个稀客每次进店都会被重新 Record：# 保留他第一次出现的时间，
@@ -254,7 +248,7 @@ internal static class SpecialGuestTracking
                 Seen[seen.StringId] = seen;
             }
 
-            if (!known && (tags == null || tags.Length == 0))
+            if (tags == null || tags.Length == 0)
             {
                 ReportUnknown(stringId, id, fallbackName);
             }
@@ -409,7 +403,7 @@ internal static class SpecialGuestTracking
 
         Plugin.Logger.LogWarning(
             $"{HarmonyTag} 发现未收录稀客：stringId=\"{stringId}\" Id={id} 本地化名=\"{fallbackName ?? "?"}\" " +
-            "（需要显示它的喜好标签，请把该 stringId 补进 GuestTagDatabase.Table）");
+            "（运行时没读到喜好标签，面板会显示「数据未收录」）");
     }
 
     /// <summary>取当前应显示的稀客（调用方负责处理锁内拷贝）。</summary>
