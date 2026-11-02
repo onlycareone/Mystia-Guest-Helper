@@ -186,11 +186,12 @@ internal static class RecipeRecommender
         string stringId,
         string key,
         int budget,
-        bool beverage)
+        bool beverage,
+        string[]? pairingTags = null)
     {
         try
         {
-            return GuardedComputeCore(guest, stringId, key, budget, beverage);
+            return GuardedComputeCore(guest, stringId, key, budget, beverage, pairingTags);
         }
         catch (Exception ex)
         {
@@ -205,12 +206,15 @@ internal static class RecipeRecommender
         string stringId,
         string key,
         int budget,
-        bool beverage)
+        bool beverage,
+        string[]? pairingTags = null)
     {
         // m03869: no curated table, no hardcoded data. The recommendation comes only from
         // dishes the player can actually serve right now + the guest's weighted like-tags
         // (SpecialGuest.WeightedTag) + budget + cookware. New DLC guests need no code change.
-        return beverage ? ComputeBeverages(guest, key, null, budget) : Compute(guest, key, budget);
+        return beverage
+            ? ComputeBeverages(guest, key, null, budget, pairingTags)
+            : Compute(guest, key, budget);
     }
 
     /// <summary>把名单里的菜名换成「名字 (¥价格)」，按预算过滤，保持名单原顺序。</summary>
@@ -334,6 +338,14 @@ internal static class RecipeRecommender
             if (likeWeights.Count == 0) return RecommendationResult.NoPreference;
 
             var hateIds = ReadHateTags(guest);
+
+            // m05033：只要菜带任何一个「厌恶」标签就绝对不进推荐池——下面三条路径
+            // （ScoreCandidates / 放宽兜底 / CollectNeutralFallback）都会再确认一次。
+            if (hateIds.Count > 0)
+            {
+                Plugin.Logger.LogDebug(
+                    $"{HarmonyTag} 稀客 [{logId}] 厌恶的菜品标签：{string.Join(" / ", ReadFoodTagNames(hateIds))}");
+            }
 
             var (candidates, source) = CollectCandidates();
             var prepped = ReadPreppedSnapshot();
@@ -634,7 +646,8 @@ internal static class RecipeRecommender
     private static RecommendationResult RankBeverages(
         List<(int Score, string Name, int Price, int Ingredients)> scored,
         int take,
-        Dictionary<string, int> stock)
+        Dictionary<string, int> stock,
+        Dictionary<string, int>? pairHits = null)
     {
         take = Math.Max(1, take);
 
@@ -680,7 +693,17 @@ internal static class RecipeRecommender
         if (picked.Count == 0) return RecommendationResult.NoMatch;
 
         var label = GuestTagConfig.StrategyDisplayName(strategy) + "酒水";
-        var items = picked.Select(x => FormatPricedItem(x.Name, x.Price, StockOf(x.Name))).ToArray();
+
+        // m05033：这瓶酒跟推荐菜的口味有多合（甜口菜配甜口酒），命中越多提示越强
+        var items = picked.Select(x =>
+        {
+            var text = FormatPricedItem(x.Name, x.Price, StockOf(x.Name));
+            if (pairHits == null || !pairHits.TryGetValue(x.Name, out var hits) || hits <= 0) return text;
+
+            // 面板会统一走 Escape() 处理富文本，所以这里用纯文本后缀，避免被转义成 ‹color=…›
+            return hits >= 2 ? text + " · 相性极佳" : text + " · 口味相合";
+        }).ToArray();
+
         return RecommendationResult.With(items, label);
     }
 
@@ -1435,6 +1458,176 @@ internal static class RecipeRecommender
         return set;
     }
 
+    /// <summary>
+    /// 读稀客「讨厌的酒水标签」（m05033）。`SpecialGuest.HateBevTag` 是 Il2Cpp 的
+    /// `IEnumerable<int>`（没有 `Original` 数组变体，也不能 foreach —— 它的
+    /// IEnumerator 是 Il2Cpp 自己的类型），所以这里按「List → StructArray → 手工枚举」
+    /// 三种方式依次尝试，任何一种成功就返回；全失败只是没有厌恶拦截，不会崩。
+    /// </summary>
+    private static HashSet<int> ReadHateBevTags(SpecialGuest guest)
+    {
+        var result = new HashSet<int>();
+        try
+        {
+            var source = guest.HateBevTag;
+            if (source == null) return result;
+
+            var asList = source.TryCast<Il2CppSystem.Collections.Generic.List<int>>();
+            if (asList != null)
+            {
+                var count = asList.Count;
+                if (count > 0 && count <= 64)
+                {
+                    for (var i = 0; i < count; i++)
+                    {
+                        try { result.Add(asList[i]); } catch { }
+                    }
+
+                    return result;
+                }
+            }
+
+            var asArray = source.TryCast<Il2CppStructArray<int>>();
+            if (asArray != null)
+            {
+                foreach (var tagId in asArray) result.Add(tagId);
+                return result;
+            }
+
+            // 保底：把它当成 Il2Cpp 的 IEnumerable<int> 再试一次 List 转换（有些版本实际是 List 包装）
+            var asBoxed = source.TryCast<Il2CppSystem.Collections.Generic.IEnumerable<int>>();
+            if (asBoxed != null)
+            {
+                var boxedList = asBoxed.TryCast<Il2CppSystem.Collections.Generic.List<int>>();
+                if (boxedList != null && boxedList.Count > 0 && boxedList.Count <= 64)
+                {
+                    for (var i = 0; i < boxedList.Count; i++)
+                    {
+                        try { result.Add(boxedList[i]); } catch { }
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Plugin.Logger.LogDebug($"{HarmonyTag} 读 HateBevTag 失败（本次不做酒水厌恶拦截）: {ex.Message}");
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// 酒水标签与菜品标签的口味换算（m05033）：游戏里两边用的是不同的标签表，
+    /// 名字不完全相同（酒水写「甘」，菜写「甜」），这里给常见的几组做个对照，
+    /// 用来判断「甜口菜配甜口酒」。
+    /// </summary>
+    private static readonly Dictionary<string, string[]> TasteSynonyms = new(StringComparer.Ordinal)
+    {
+        ["甘"] = new[] { "甜", "甘", "水果", "果味" },
+        ["辛"] = new[] { "辣", "辛", "重油" },
+        ["苦"] = new[] { "苦", "清淡" },
+        ["酸"] = new[] { "酸", "水果" },
+        ["水果"] = new[] { "水果", "果味", "甜" },
+        ["可加热"] = new[] { "汤羹", "清淡", "和风" },
+        ["可加冰"] = new[] { "凉菜", "生", "清淡" },
+        ["古典"] = new[] { "和风", "文化底蕴", "清淡" },
+        ["现代"] = new[] { "西式", "洋食", "甜" },
+    };
+
+    /// <summary>把一组食物标签 id 转成标签名（日志/提示用）。</summary>
+    private static List<string> ReadFoodTagNames(HashSet<int> ids)
+    {
+        var names = new List<string>();
+        foreach (var id in ids)
+        {
+            try
+            {
+                var text = GameData.CoreLanguage.Collections.DataBaseLanguage.GetFoodTag(id);
+                if (!string.IsNullOrWhiteSpace(text) && !names.Contains(text!)) names.Add(text!);
+            }
+            catch
+            {
+                // 跳过
+            }
+        }
+
+        return names;
+    }
+
+    /// <summary>这瓶酒的口味与推荐的菜有多契合：命中个数（含同义词）。</summary>
+    private static int CountPairingHits(List<string> drinkTagNames, string[]? pairingTags)
+    {
+        if (pairingTags == null || pairingTags.Length == 0) return 0;
+
+        var foodTagSet = new HashSet<string>(pairingTags, StringComparer.Ordinal);
+        var hits = 0;
+        foreach (var drinkTag in drinkTagNames)
+        {
+            if (string.IsNullOrEmpty(drinkTag)) continue;
+            if (foodTagSet.Contains(drinkTag))
+            {
+                hits++;
+                continue;
+            }
+
+            if (TasteSynonyms.TryGetValue(drinkTag, out var equivalents) &&
+                equivalents.Any(foodTagSet.Contains))
+            {
+                hits++;
+            }
+        }
+
+        return hits;
+    }
+
+    /// <summary>把面板上的「菜名 (¥价格/x份)」拆回纯菜名。</summary>
+    internal static string[] ExtractItemNames(string[]? items)
+    {
+        if (items == null || items.Length == 0) return Array.Empty<string>();
+
+        var names = new List<string>(items.Length);
+        foreach (var item in items)
+        {
+            if (string.IsNullOrWhiteSpace(item)) continue;
+
+            var cut = item!.IndexOf(" (", StringComparison.Ordinal);
+            names.Add(cut > 0 ? item.Substring(0, cut) : item.Trim());
+        }
+
+        return names.ToArray();
+    }
+
+    /// <summary>按菜名查出这道菜的全部标签名（给酒水做口味配对用）。</summary>
+    internal static string[] ReadDishTagNames(string[] dishNames)
+    {
+        if (dishNames == null || dishNames.Length == 0) return Array.Empty<string>();
+
+        var wanted = new HashSet<string>(dishNames, StringComparer.Ordinal);
+        var tags = new List<string>();
+        try
+        {
+            foreach (var pair in DataBaseCore.Foods)
+            {
+                var food = pair.Value;
+                if (food == null || food.Pointer == IntPtr.Zero) continue;
+
+                var name = ReadName(food);
+                if (string.IsNullOrEmpty(name) || !wanted.Contains(name!)) continue;
+
+                foreach (var tagName in ReadTagNames(food.Tags))
+                {
+                    if (!tags.Contains(tagName)) tags.Add(tagName);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Plugin.Logger.LogDebug($"{HarmonyTag} 读菜名标签失败（酒水配对退化为按喜好排序）: {ex.Message}");
+        }
+
+        return tags.Take(8).ToArray();
+    }
+
     private static HashSet<int> ReadHateTags(SpecialGuest guest)
     {
         var set = new HashSet<int>();
@@ -1574,12 +1767,17 @@ internal static class RecipeRecommender
         SpecialGuest guest,
         string stringId,
         string[]? hardcodedTags,
-        int budget)
+        int budget,
+        string[]? pairingTags = null)
     {
-        var key = "bev:" + (stringId ?? string.Empty) + "@" + budget + "#" + GuestTagConfig.GetStrategy();
+        var pairingKey = pairingTags == null || pairingTags.Length == 0
+            ? "-"
+            : string.Join("|", pairingTags);
+        var key = "bev:" + (stringId ?? string.Empty) + "@" + budget + "#" +
+                  GuestTagConfig.GetStrategy() + "&" + pairingKey;
         if (TryGetCached(key, out var cached)) return cached;
 
-        var result = GuardedCompute(guest, stringId ?? string.Empty, key, budget, beverage: true);
+        var result = GuardedCompute(guest, stringId ?? string.Empty, key, budget, beverage: true, pairingTags);
         StoreCache(key, result);
         return result;
     }
@@ -1616,7 +1814,8 @@ internal static class RecipeRecommender
         SpecialGuest guest,
         string stringId,
         string[]? hardcodedTags,
-        int budget)
+        int budget,
+        string[]? pairingTags)
     {
         try
         {
@@ -1638,8 +1837,48 @@ internal static class RecipeRecommender
             var bevWeights = ReadWeightedTags(SafeWeightedBeverageTags(guest));
             if (likeNames.Count == 0 && bevWeights.Count == 0) return RecommendationResult.NoPreference;
 
+            // m05033：稀客讨厌的酒水标签，命中任何一条直接踢出候选池（哪怕再贵、再合口味）
+            var hateBevIds = ReadHateBevTags(guest);
+            if (hateBevIds.Count > 0)
+            {
+                Plugin.Logger.LogDebug(
+                    $"{HarmonyTag} 稀客 [{stringId}] 讨厌的酒水标签：{string.Join(" / ", ReadBeverageTagNames(hateBevIds))}");
+            }
+
             var (candidates, source) = CollectBeverageCandidates();
             if (candidates.Count == 0) return RecommendationResult.NoMatch;
+
+            if (hateBevIds.Count > 0)
+            {
+                var filtered = new List<Sellable>(candidates.Count);
+                var removed = 0;
+                foreach (var drink in candidates)
+                {
+                    if (drink == null || drink.Pointer == IntPtr.Zero) continue;
+
+                    var bad = false;
+                    try
+                    {
+                        foreach (var tagId in ReadTagArray(drink.Tags))
+                        {
+                            if (hateBevIds.Contains(tagId)) { bad = true; break; }
+                        }
+                    }
+                    catch
+                    {
+                        // 读不到标签就不拦，交给后面正常流程
+                    }
+
+                    if (bad) { removed++; continue; }
+                    filtered.Add(drink);
+                }
+
+                if (removed > 0)
+                {
+                    candidates = filtered;
+                    source += $"（已剔除 {removed} 款踩雷酒）";
+                }
+            }
 
             // m03632：只在「吧台里真有酒」的里面挑（RunTimeStorage.Beverages）。
             // 库存为 0 的一律不露面——玩家手里没这瓶酒，推荐了也端不出来。
@@ -1671,6 +1910,7 @@ internal static class RecipeRecommender
 
             var scored = new List<(int Score, string Name, int Price, int Ingredients)>();
             var seenNames = new HashSet<string>(StringComparer.Ordinal);
+            _pairHitsByDrink.Clear();
 
             foreach (var drink in candidates)
             {
@@ -1680,11 +1920,17 @@ internal static class RecipeRecommender
                 {
                     // m03869: weighted score via likeBevTag tagId->weight against the drink's Tags;
                     // when the game gives no weights, fall back to matching tag names.
+                    var drinkTagIds = ReadTagArray(drink.Tags);
+                    if (hateBevIds.Count > 0 && drinkTagIds.Any(tagId => hateBevIds.Contains(tagId)))
+                    {
+                        continue;
+                    }
+
                     var weightSum = 0;
                     var hits = 0;
                     if (bevWeights.Count > 0)
                     {
-                        foreach (var tagId in ReadTagArray(drink.Tags))
+                        foreach (var tagId in drinkTagIds)
                         {
                             if (!bevWeights.TryGetValue(tagId, out var weight)) continue;
 
@@ -1700,6 +1946,9 @@ internal static class RecipeRecommender
                         hits = drinkTags.Count(tag => likeNames.Contains(tag));
                     }
 
+                    // m05033：与推荐菜品的口味契合度（甜口菜 → 甜口酒），命中越多越靠前
+                    var pairHits = CountPairingHits(ReadBeverageTagNames(drinkTagIds), pairingTags);
+
                     if (hits == 0 && GuestTagConfig.GetStrategy() != RecommendStrategy.PriceHigh) continue;
 
                     var name = ReadName(drink);
@@ -1711,6 +1960,7 @@ internal static class RecipeRecommender
                     if (drinkPrice <= 0) continue;
 
                     scored.Add((weightSum > 0 ? weightSum * 10 + hits : hits * 2, name!, drinkPrice, 0));
+                    if (pairHits > 0) _pairHitsByDrink[name!] = pairHits;
                 }
                 catch
                 {
@@ -1782,7 +2032,7 @@ internal static class RecipeRecommender
                 }
             }
 
-            var result = RankBeverages(affordable, GuestTagConfig.GetMaxDrinks(), stocked);
+            var result = RankBeverages(affordable, GuestTagConfig.GetMaxDrinks(), stocked, _pairHitsByDrink);
 
             Plugin.Logger.LogDebug(
                 $"{HarmonyTag} 为稀客 [{stringId}] 推荐酒水（策略 {GuestTagConfig.StrategyDisplayName(GuestTagConfig.GetStrategy())}，" +
@@ -1899,6 +2149,60 @@ internal static class RecipeRecommender
 
     /// <summary>「高价」的绝对门槛：最高价都不到这个数的池子，没资格叫高价推荐。</summary>
     private static bool _priceLadderLogged;
+
+    /// <summary>酒名 → 与推荐菜的口味契合度（m05033），只用于面板上的「相性」提示。</summary>
+    private static readonly Dictionary<string, int> _pairHitsByDrink = new(StringComparer.Ordinal);
+
+    /// <summary>把一组酒水标签 id 转成标签名（读不到就返回空列表）。</summary>
+    private static List<string> ReadBeverageTagNames(IEnumerable<int>? ids)
+    {
+        var names = new List<string>();
+        if (ids == null) return names;
+
+        try
+        {
+            foreach (var tagId in ids)
+            {
+                try
+                {
+                    var text = GameData.CoreLanguage.Collections.DataBaseLanguage.GetBeverageTag(tagId);
+                    if (!string.IsNullOrWhiteSpace(text) && !names.Contains(text!)) names.Add(text!);
+                }
+                catch
+                {
+                    // 单个标签读不到就跳过
+                }
+
+                if (names.Count >= 16) break;
+            }
+        }
+        catch
+        {
+            // 整个数组读不到就算了
+        }
+
+        return names;
+    }
+
+    /// <summary>把一组酒水标签 id 转成标签名（HashSet 版本，日志用）。</summary>
+    private static List<string> ReadBeverageTagNames(HashSet<int> ids)
+    {
+        var names = new List<string>();
+        foreach (var id in ids)
+        {
+            try
+            {
+                var text = GameData.CoreLanguage.Collections.DataBaseLanguage.GetBeverageTag(id);
+                if (!string.IsNullOrWhiteSpace(text) && !names.Contains(text!)) names.Add(text!);
+            }
+            catch
+            {
+                // 跳过
+            }
+        }
+
+        return names;
+    }
 
     /// <summary>最近一次读到的吧台库存（酒名 → 瓶数），只用于面板显示 /xN。</summary>
     private static Dictionary<string, int> _beverageStockSnapshot = new(StringComparer.Ordinal);

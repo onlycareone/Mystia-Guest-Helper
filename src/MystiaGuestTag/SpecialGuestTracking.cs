@@ -218,11 +218,15 @@ internal static class SpecialGuestTracking
 
             // 推荐酒水：喜好标签优先读 SpecialGuest.LikeBevTag，读不到用硬编码表里那份（按人设推的）。
             // 两者都没有 = NoPreference，面板显示「无明显偏好」。
+            // m05033：把「推荐出来的菜」的标签传给酒水，做「甜口菜配甜口酒」的口味配对。
+            var pairingTags = RecipeRecommender.ReadDishTagNames(
+                RecipeRecommender.ExtractItemNames(food.Items));
             var beverage = RecipeRecommender.RecommendBeverages(
                 guest,
                 stringId ?? string.Empty,
                 null,
-                budget);
+                budget,
+                pairingTags);
 
             // 同一个稀客每次进店都会被重新 Record：# 保留他第一次出现的时间，
             // 这样面板排序稳定（先来的在上），不会每帧抖。
