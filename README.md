@@ -9,6 +9,48 @@
 - 加载器：BepInEx 6.0.0-be.785+6abdba4（Unity.IL2CPP-win-x64）
 - 插件目标框架：`net6.0`（游戏自带 `BepInEx/dotnet` 的 coreclr 为 .NET 6.0.7）
 
+## 给玩家：怎么装（三种情况）
+
+只想玩游戏、不打算编译的，看这一节就够。装好后的效果：营业时屏幕右下角出现稀客面板，显示进店稀客的名字、喜好/厌恶标签和高低价推荐菜。
+
+### 情况 A：从没装过 BepInEx（全新游戏目录）
+
+1. 从 [Releases](https://github.com/onlycareone/Mystia-Guest-Helper/releases) 下载 `GuestTag.zip`。
+2. 在 Steam 库里右键游戏 → 管理 → 浏览本地文件，打开游戏根目录。
+3. 把 **zip 里的全部内容**解压进去，与 `Touhou Mystia Izakaya.exe` 平级。
+4. 启动游戏。首次启动会慢一点（IL2CPP 初始化），`BepInEx\LogOutput.log` 生成即说明加载器起来了。
+
+解压后的目录应该长这样：
+
+```
+Touhou Mystia Izakaya/
+├─ Touhou Mystia Izakaya.exe
+├─ winhttp.dll            ← zip 里的
+├─ doorstop_config.ini    ← zip 里的
+├─ .doorstop_version      ← zip 里的
+├─ dotnet/                ← zip 里的
+└─ BepInEx/               ← zip 里的（已有同名文件就覆盖合并）
+   └─ plugins/GuestTag.dll
+```
+
+### 情况 B：已经装过 BepInEx（别的 Mod 或旧版本）
+
+只需要一个文件：`GuestTag.dll`，放进
+
+```
+<游戏根目录>\BepInEx\plugins\GuestTag.dll
+```
+
+直接平铺在 `plugins` 下，**不要**再套一层文件夹。启动游戏即可。
+如果 `plugins` 里还躺着以前的 `MystiaGuestTag.dll`，删掉它，别和 `GuestTag.dll` 并存。
+
+### 情况 C：装完黑屏 / 闪退 / 进不去游戏
+
+1. 先看 `<游戏根目录>\BepInEx\LogOutput.log` 最后几十行，报错通常写在那里。
+2. 老显卡或驱动不接受默认渲染图，试试在 Steam 的「启动选项」里填 `-force-vulkan` 再启动。
+3. 还不行：把 `LogOutput.log` 提到 issue 里，说明游戏版本（目前适配 4.4.0e）。
+4. 想彻底卸载：删掉 `BepInEx\plugins\GuestTag.dll` 就行，其余文件不影响游戏。
+
 ## 目录
 
 ```
@@ -28,18 +70,19 @@ MystiaGuestTag/
 └─ MystiaAI/ MetaMystia/         # 参考实现（不参与本项目编译）
 ```
 
-## 构建与部署
+## 构建与部署（想自己编译的人看）
+
+需要 .NET SDK 8 和游戏本体（要引用游戏目录里 `BepInEx/core`、`BepInEx/interop` 的 DLL，这些不随仓库分发）。在仓库根目录：
 
 ```bash
-bash tools/deploy.sh
+dotnet build src/MystiaGuestTag/MystiaGuestTag.csproj -c Release -p:GameDir="<游戏根目录>"
 ```
 
-脚本做的事：用 `_tools/dotnet8/dotnet.exe`（便携 .NET SDK 8.0.404）
-`dotnet build -c Release` → 把 `bin/Release/net6.0/MystiaGuestTag.dll`
-复制到 `E:\SteamLibrary\steamapps\common\Touhou Mystia Izakaya\BepInEx\plugins\MystiaGuestTag\`。
-
-注意：`dotnet build` 内置的 DeployToGame 目标在本机受限环境下覆盖写入游戏目录会被拒
-（`Access denied`），已设为只警告；部署以 `tools/deploy.sh` 里的 `cp` 为准。
+- `GameDir` 指向**游戏根目录**（含 `Touhou Mystia Izakaya.exe`），不是 `BepInEx` 目录；也可以设环境变量 `TOUHOU_GAME_DIR` 代替命令行参数。
+- 两个都没给时构建会直接停下并说明怎么配，不会拿作者机器上的路径去猜。
+- 路径不对（缺 `BepInEx/core`）同样会报错并指出缺什么。
+- 产物在 `src/MystiaGuestTag/bin/Release/net6.0/MystiaGuestTag.dll`；把它放到 `<游戏根目录>/BepInEx/plugins/` 并命名为 `GuestTag.dll`，就和发布包里的文件一致。
+- 仓库不收 `bin/`、`obj/`、`_downloads/` 以及 BepInEx 运行时文件（见 `.gitignore`）；给玩家的完整包见 Releases。
 
 ## 取数链路（interop 元数据已核实）
 
@@ -252,14 +295,14 @@ score     = likeHits * 2                     // 只保留 >0
 | 运行时产物 | 只有 `BepInEx\config\cc.mystia.guesttag.cfg`（配置，游戏目录内）和 `BepInEx\LogOutput.log`（日志） |
 | 与外部进程的通信 | 无（没有 socket / pipe / 环境变量依赖） |
 
-`csproj` 里的 `E:\SteamLibrary\...` 只是**编译期**的引用路径（`-p:GameDir=` 可覆盖），不会进 DLL。
+`csproj` 里的 `GameDir` 只是**编译期**的引用路径（由 `-p:GameDir=` 或环境变量 `TOUHOU_GAME_DIR` 提供），不会写进 DLL。
 
 ### 已经拆掉的「看起来像被 DSH 绑住」的东西
 
 1. **BepInEx 控制台窗口**：以前每次启动都会弹一个黑色控制台（`[Logging.Console] Enabled = true`）。
    **那个窗口一关，游戏进程就一起退出** —— 这最像「关掉页面后游戏闪退」的元凶。
    已改成 `Enabled = false`（备份：`BepInEx/config/BepInEx.cfg.bak-20261101-console`），日志照旧写 `BepInEx/LogOutput.log`。
-2. **开发路径的启动参数**：之前调试时用 `-logFile E:\DSH_Project\MystiaGuestTag\_tools\player_vk3.log` 启动。
+2. **开发路径的启动参数**：之前调试时用 `-logFile <工程目录>/_tools/player_vk3.log` 启动。
    现在只需要 `-force-vulkan`，不再指向任何开发目录。
 3. **后台监控脚本**：之前有两个 PowerShell 后台任务在轮询日志、给游戏窗口截图（`PrintWindow`）。
    已全部停掉；插件本身不依赖它们。
