@@ -24,7 +24,7 @@ public class Plugin : BasePlugin
 {
     public const string PluginGuid = "cc.mystia.guesttag";
     public const string PluginName = "Mystia Guest Tag";
-    public const string PluginVersion = "1.2.0";
+    public const string PluginVersion = "1.2.1";
 
     internal static ManualLogSource Logger = null!;
 
@@ -42,6 +42,10 @@ public class Plugin : BasePlugin
 
         // Hook 点 2：营业场景的常驻 OnGUI —— 面板绘制点
         GuestTagOverlay.Install(harmony);
+
+        // 附带：把游戏里的全量稀客权重数据导出成 JSON（数据加载完就写，只写一次）
+        SpecialGuestExport.Install(harmony);
+        SpecialGuestExport.TryExportOnce();
 
         Logger.LogInfo($"{PluginName} 已就绪：面板顶部 [-]/[+] 调显示人数与菜/酒条数，下面一行 [策略: …] 循环切换低价优先/高价优先/少料易做（都立即写入 cfg）；鼠标在面板上滚轮翻页（到底回顶），按住标题栏可拖动，F10 隐藏/显示，F9 打开滑条版设置。");
     }

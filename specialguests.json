@@ -1,0 +1,1167 @@
+{
+  "source": "Touhou Mystia Izakaya 4.4.0e / Mystia Guest Tag 1.2.1",
+  "generatedAt": "2026-11-02 17:06:10",
+  "count": 116,
+  "guests": [
+    {
+      "id": 0,
+      "stringId": "Wriggle",
+      "name": "莉格露",
+      "fundRange": [200, 400],
+      "enduranceLimit": 1.4,
+      "likeFood": [{ "tagId": 17, "tag": "甜", "weight": 1 }, { "tagId": 18, "tag": "生", "weight": 1 }, { "tagId": 24, "tag": "猎奇", "weight": 2 }, { "tagId": 0, "tag": "肉", "weight": 1 }],
+      "likeBev": [{ "tagId": 0, "tag": "低酒精", "weight": 1 }, { "tagId": 3, "tag": "可加冰", "weight": 1 }],
+      "hateFood": ["素", "清淡", "凉爽"]
+    },
+    {
+      "id": 1,
+      "stringId": "Rumia",
+      "name": "露米娅",
+      "fundRange": [150, 350],
+      "enduranceLimit": 1.4,
+      "likeFood": [{ "tagId": 0, "tag": "肉", "weight": 1 }, { "tagId": 18, "tag": "生", "weight": 1 }, { "tagId": 24, "tag": "猎奇", "weight": 1 }, { "tagId": 9, "tag": "饱腹", "weight": 1 }, { "tagId": 19, "tag": "招牌", "weight": 1 }],
+      "likeBev": [{ "tagId": 15, "tag": "苦", "weight": 1 }, { "tagId": 16, "tag": "气泡", "weight": 1 }],
+      "hateFood": ["昂贵", "下酒"]
+    },
+    {
+      "id": 2,
+      "stringId": "Chen",
+      "name": "橙",
+      "fundRange": [400, 600],
+      "enduranceLimit": 1.5,
+      "likeFood": [{ "tagId": 0, "tag": "肉", "weight": 1 }, { "tagId": 1, "tag": "水产", "weight": 3 }, { "tagId": 6, "tag": "重油", "weight": 2 }, { "tagId": 17, "tag": "甜", "weight": 1 }, { "tagId": 33, "tag": "烧烤", "weight": 1 }],
+      "likeBev": [{ "tagId": 14, "tag": "辛", "weight": 1 }, { "tagId": 12, "tag": "水果", "weight": 1 }],
+      "hateFood": ["素", "灼热", "猎奇"]
+    },
+    {
+      "id": 3,
+      "stringId": "Akyuu",
+      "name": "稗田阿求",
+      "fundRange": [500, 800],
+      "enduranceLimit": 1.4,
+      "likeFood": [{ "tagId": 7, "tag": "清淡", "weight": 1 }, { "tagId": 12, "tag": "和风", "weight": 2 }, { "tagId": 17, "tag": "甜", "weight": 1 }, { "tagId": 25, "tag": "文化底蕴", "weight": 3 }, { "tagId": 4, "tag": "高级", "weight": 1 }, { "tagId": 32, "tag": "汤羹", "weight": 1 }],
+      "likeBev": [{ "tagId": 6, "tag": "清酒", "weight": 1 }, { "tagId": 4, "tag": "可加热", "weight": 1 }],
+      "hateFood": ["重油", "咸", "灼热"]
+    },
+    {
+      "id": 4,
+      "stringId": "Keine",
+      "name": "上白泽慧音",
+      "fundRange": [400, 800],
+      "enduranceLimit": 1.8,
+      "likeFood": [{ "tagId": 14, "tag": "中华", "weight": 1 }, { "tagId": 12, "tag": "和风", "weight": 1 }, { "tagId": 2, "tag": "素", "weight": 1 }, { "tagId": 7, "tag": "清淡", "weight": 1 }, { "tagId": 3, "tag": "家常", "weight": 1 }, { "tagId": 25, "tag": "文化底蕴", "weight": 3 }],
+      "likeBev": [{ "tagId": 5, "tag": "烧酒", "weight": 2 }, { "tagId": 6, "tag": "清酒", "weight": 2 }, { "tagId": 9, "tag": "利口酒", "weight": 1 }],
+      "hateFood": ["大份", "重油", "咸"]
+    },
+    {
+      "id": 5,
+      "stringId": "Kasen",
+      "name": "茨木华扇",
+      "fundRange": [400, 600],
+      "enduranceLimit": 1.4,
+      "likeFood": [{ "tagId": 25, "tag": "文化底蕴", "weight": 2 }, { "tagId": 12, "tag": "和风", "weight": 1 }, { "tagId": 3, "tag": "家常", "weight": 1 }, { "tagId": 8, "tag": "下酒", "weight": 1 }],
+      "likeBev": [{ "tagId": 11, "tag": "直饮", "weight": 1 }, { "tagId": 17, "tag": "古典", "weight": 1 }, { "tagId": 1, "tag": "中酒精", "weight": 1 }],
+      "hateFood": ["实惠", "生", "辣"]
+    },
+    {
+      "id": 6,
+      "stringId": "Rinnosuke",
+      "name": "森近霖之助",
+      "fundRange": [250, 400],
+      "enduranceLimit": 1.2,
+      "likeFood": [{ "tagId": 3, "tag": "家常", "weight": 1 }, { "tagId": 9, "tag": "饱腹", "weight": 1 }, { "tagId": 16, "tag": "鲜", "weight": 1 }],
+      "likeBev": [{ "tagId": 5, "tag": "烧酒", "weight": 1 }, { "tagId": 10, "tag": "啤酒", "weight": 3 }],
+      "hateFood": ["重油", "下酒", "猎奇"]
+    },
+    {
+      "id": 7,
+      "stringId": "Reimu",
+      "name": "博丽灵梦",
+      "fundRange": [150, 300],
+      "enduranceLimit": 1.1,
+      "likeFood": [{ "tagId": 17, "tag": "甜", "weight": 2 }, { "tagId": 9, "tag": "饱腹", "weight": 3 }, { "tagId": -2, "tag": "实惠", "weight": 5 }, { "tagId": 27, "tag": "不可思议", "weight": 1 }, { "tagId": 4, "tag": "高级", "weight": 1 }],
+      "likeBev": [{ "tagId": -1, "tag": "无酒精", "weight": 1 }, { "tagId": 0, "tag": "低酒精", "weight": 1 }, { "tagId": 4, "tag": "可加热", "weight": 1 }],
+      "hateFood": ["昂贵", "下酒"]
+    },
+    {
+      "id": 8,
+      "stringId": "Suika",
+      "name": "伊吹萃香",
+      "fundRange": [600, 800],
+      "enduranceLimit": 1.8,
+      "likeFood": [{ "tagId": 0, "tag": "肉", "weight": 1 }, { "tagId": 12, "tag": "和风", "weight": 2 }, { "tagId": 8, "tag": "下酒", "weight": 3 }, { "tagId": 23, "tag": "力量涌现", "weight": 3 }, { "tagId": 28, "tag": "小巧", "weight": 2 }],
+      "likeBev": [{ "tagId": 2, "tag": "高酒精", "weight": 1 }, { "tagId": 11, "tag": "直饮", "weight": 2 }],
+      "hateFood": ["重油"]
+    },
+    {
+      "id": 9,
+      "stringId": "Tenshi",
+      "name": "比那名居天子",
+      "fundRange": [2000, 3000],
+      "enduranceLimit": 1.05,
+      "likeFood": [{ "tagId": 2, "tag": "素", "weight": 1 }, { "tagId": 7, "tag": "清淡", "weight": 1 }, { "tagId": 17, "tag": "甜", "weight": 1 }, { "tagId": 20, "tag": "适合拍照", "weight": 3 }, { "tagId": 5, "tag": "传说", "weight": 1 }, { "tagId": -3, "tag": "昂贵", "weight": 1 }, { "tagId": 31, "tag": "果味", "weight": 3 }],
+      "likeBev": [{ "tagId": 2, "tag": "高酒精", "weight": 1 }, { "tagId": 7, "tag": "鸡尾酒", "weight": 3 }],
+      "hateFood": ["肉", "家常", "重油"]
+    },
+    {
+      "id": 10,
+      "stringId": "Marisa",
+      "name": "雾雨魔理沙",
+      "fundRange": [3000, 5000],
+      "enduranceLimit": 1.1,
+      "likeFood": [{ "tagId": 26, "tag": "菌类", "weight": 1 }, { "tagId": 5, "tag": "传说", "weight": 1 }, { "tagId": 12, "tag": "和风", "weight": 4 }, { "tagId": 6, "tag": "重油", "weight": 1 }, { "tagId": 22, "tag": "灼热", "weight": 1 }],
+      "likeBev": [{ "tagId": 0, "tag": "低酒精", "weight": 1 }, { "tagId": 3, "tag": "可加冰", "weight": 4 }],
+      "hateFood": ["猎奇"]
+    },
+    {
+      "id": 12,
+      "stringId": "Yuyuko_Intro",
+      "name": "??????",
+      "fundRange": [9999, 9999],
+      "enduranceLimit": 0,
+      "likeFood": [{ "tagId": 0, "tag": "肉", "weight": 1 }, { "tagId": 2, "tag": "素", "weight": 1 }, { "tagId": 1, "tag": "水产", "weight": 1 }, { "tagId": -4, "tag": "黑暗物质", "weight": 1 }],
+      "likeBev": [],
+      "hateFood": []
+    },
+    {
+      "id": 13,
+      "stringId": "Keine_Intro",
+      "name": "?????",
+      "fundRange": [800, 1600],
+      "enduranceLimit": 0,
+      "likeFood": [],
+      "likeBev": [],
+      "hateFood": []
+    },
+    {
+      "id": 14,
+      "stringId": "Kyouko",
+      "name": "幽谷响子",
+      "fundRange": [800, 900],
+      "enduranceLimit": 0,
+      "likeFood": [],
+      "likeBev": [],
+      "hateFood": []
+    },
+    {
+      "id": 17,
+      "stringId": "Sanae",
+      "name": "东风谷早苗",
+      "fundRange": [800, 1500],
+      "enduranceLimit": 0,
+      "likeFood": [],
+      "likeBev": [],
+      "hateFood": []
+    },
+    {
+      "id": 18,
+      "stringId": "Kosuzu",
+      "name": "本居小铃",
+      "fundRange": [800, 900],
+      "enduranceLimit": 0,
+      "likeFood": [],
+      "likeBev": [],
+      "hateFood": []
+    },
+    {
+      "id": 19,
+      "stringId": "Aunn",
+      "name": "高丽野阿吽",
+      "fundRange": [800, 900],
+      "enduranceLimit": 0,
+      "likeFood": [{ "tagId": 30, "tag": "特产", "weight": 1 }],
+      "likeBev": [{ "tagId": 11, "tag": "直饮", "weight": 1 }],
+      "hateFood": []
+    },
+    {
+      "id": 20,
+      "stringId": "Sakuya",
+      "name": "十六夜咲夜",
+      "fundRange": [700, 1200],
+      "enduranceLimit": 0,
+      "likeFood": [],
+      "likeBev": [],
+      "hateFood": []
+    },
+    {
+      "id": 21,
+      "stringId": "Reisen",
+      "name": "铃仙",
+      "fundRange": [500, 900],
+      "enduranceLimit": 0,
+      "likeFood": [],
+      "likeBev": [],
+      "hateFood": []
+    },
+    {
+      "id": 15,
+      "stringId": "Meirin",
+      "name": "红美铃",
+      "fundRange": [200, 400],
+      "enduranceLimit": 1.2,
+      "likeFood": [{ "tagId": 14, "tag": "中华", "weight": 1 }, { "tagId": 23, "tag": "力量涌现", "weight": 2 }, { "tagId": 0, "tag": "肉", "weight": 1 }, { "tagId": 9, "tag": "饱腹", "weight": 2 }],
+      "likeBev": [{ "tagId": 19, "tag": "提神", "weight": 2 }, { "tagId": 4, "tag": "可加热", "weight": 2 }, { "tagId": 17, "tag": "古典", "weight": 1 }],
+      "hateFood": ["西式", "猎奇", "果味"]
+    },
+    {
+      "id": 28,
+      "stringId": "Cirno",
+      "name": "琪露诺",
+      "fundRange": [100, 200],
+      "enduranceLimit": 1.2,
+      "likeFood": [{ "tagId": 21, "tag": "凉爽", "weight": 3 }, { "tagId": 17, "tag": "甜", "weight": 2 }, { "tagId": 20, "tag": "适合拍照", "weight": 2 }, { "tagId": 24, "tag": "猎奇", "weight": 1 }],
+      "likeBev": [{ "tagId": 13, "tag": "甘", "weight": 1 }, { "tagId": 12, "tag": "水果", "weight": 1 }, { "tagId": 3, "tag": "可加冰", "weight": 1 }],
+      "hateFood": ["文化底蕴", "昂贵", "下酒"]
+    },
+    {
+      "id": 27,
+      "stringId": "Patchouli",
+      "name": "帕秋莉",
+      "fundRange": [600, 1000],
+      "enduranceLimit": 1.4,
+      "likeFood": [{ "tagId": 13, "tag": "西式", "weight": 2 }, { "tagId": 17, "tag": "甜", "weight": 2 }, { "tagId": 20, "tag": "适合拍照", "weight": 2 }, { "tagId": 29, "tag": "梦幻", "weight": 1 }, { "tagId": 4, "tag": "高级", "weight": 1 }],
+      "likeBev": [{ "tagId": 9, "tag": "利口酒", "weight": 1 }, { "tagId": 16, "tag": "气泡", "weight": 1 }, { "tagId": 7, "tag": "鸡尾酒", "weight": 1 }],
+      "hateFood": ["灼热", "猎奇", "生", "咸"]
+    },
+    {
+      "id": 24,
+      "stringId": "Mokou",
+      "name": "藤原妹红",
+      "fundRange": [300, 600],
+      "enduranceLimit": 1.5,
+      "likeFood": [{ "tagId": 22, "tag": "灼热", "weight": 2 }, { "tagId": 35, "tag": "燃起来了", "weight": 1 }, { "tagId": 34, "tag": "辣", "weight": 2 }, { "tagId": 31, "tag": "果味", "weight": 2 }, { "tagId": 33, "tag": "烧烤", "weight": 1 }],
+      "likeBev": [{ "tagId": 15, "tag": "苦", "weight": 1 }, { "tagId": 14, "tag": "辛", "weight": 1 }, { "tagId": 5, "tag": "烧酒", "weight": 1 }],
+      "hateFood": ["昂贵", "高级", "不可思议"]
+    },
+    {
+      "id": 25,
+      "stringId": "Kaguya",
+      "name": "蓬莱山辉夜",
+      "fundRange": [1000, 1500],
+      "enduranceLimit": 1.5,
+      "likeFood": [{ "tagId": 12, "tag": "和风", "weight": 1 }, { "tagId": 25, "tag": "文化底蕴", "weight": 1 }, { "tagId": 5, "tag": "传说", "weight": 1 }, { "tagId": 27, "tag": "不可思议", "weight": 1 }],
+      "likeBev": [{ "tagId": 18, "tag": "现代", "weight": 2 }, { "tagId": 6, "tag": "清酒", "weight": 2 }, { "tagId": 17, "tag": "古典", "weight": 1 }],
+      "hateFood": ["招牌", "大份", "猎奇"]
+    },
+    {
+      "id": 16,
+      "stringId": "Tewi_HardSell",
+      "name": "因幡帝",
+      "fundRange": [200, 400],
+      "enduranceLimit": 1.25,
+      "likeFood": [{ "tagId": 29, "tag": "梦幻", "weight": 1 }, { "tagId": 5, "tag": "传说", "weight": 2 }, { "tagId": 17, "tag": "甜", "weight": 5 }, { "tagId": 21, "tag": "凉爽", "weight": 3 }, { "tagId": 28, "tag": "小巧", "weight": 4 }],
+      "likeBev": [{ "tagId": 12, "tag": "水果", "weight": 2 }, { "tagId": 13, "tag": "甘", "weight": 3 }, { "tagId": -1, "tag": "无酒精", "weight": 1 }],
+      "hateFood": ["重油", "山珍", "猎奇"]
+    },
+    {
+      "id": 29,
+      "stringId": "Tewi",
+      "name": "因幡帝",
+      "fundRange": [200, 400],
+      "enduranceLimit": 1.25,
+      "likeFood": [{ "tagId": 29, "tag": "梦幻", "weight": 1 }, { "tagId": 5, "tag": "传说", "weight": 2 }, { "tagId": 17, "tag": "甜", "weight": 5 }, { "tagId": 21, "tag": "凉爽", "weight": 3 }, { "tagId": 28, "tag": "小巧", "weight": 4 }],
+      "likeBev": [{ "tagId": 12, "tag": "水果", "weight": 2 }, { "tagId": 13, "tag": "甘", "weight": 3 }, { "tagId": -1, "tag": "无酒精", "weight": 1 }],
+      "hateFood": ["重油", "山珍", "猎奇"]
+    },
+    {
+      "id": 22,
+      "stringId": "Remilia",
+      "name": "蕾米莉亚",
+      "fundRange": [9999, 9999],
+      "enduranceLimit": 1,
+      "likeFood": [{ "tagId": 17, "tag": "甜", "weight": 1 }, { "tagId": 13, "tag": "西式", "weight": 1 }, { "tagId": 18, "tag": "生", "weight": 1 }, { "tagId": 4, "tag": "高级", "weight": 1 }],
+      "likeBev": [{ "tagId": 13, "tag": "甘", "weight": 1 }, { "tagId": 8, "tag": "西洋酒", "weight": 1 }, { "tagId": 17, "tag": "古典", "weight": 1 }, { "tagId": 12, "tag": "水果", "weight": 1 }],
+      "hateFood": []
+    },
+    {
+      "id": 23,
+      "stringId": "Yuyuko",
+      "name": "西行寺幽幽子",
+      "fundRange": [9999, 9999],
+      "enduranceLimit": 1,
+      "likeFood": [{ "tagId": 0, "tag": "肉", "weight": 1 }, { "tagId": 1, "tag": "水产", "weight": 1 }, { "tagId": 4, "tag": "高级", "weight": 2 }, { "tagId": 5, "tag": "传说", "weight": 2 }, { "tagId": 12, "tag": "和风", "weight": 2 }, { "tagId": 14, "tag": "中华", "weight": 1 }, { "tagId": 9, "tag": "饱腹", "weight": 1 }, { "tagId": -1, "tag": "大份", "weight": 2 }],
+      "likeBev": [{ "tagId": 3, "tag": "可加冰", "weight": 2 }, { "tagId": 2, "tag": "高酒精", "weight": 1 }, { "tagId": 7, "tag": "鸡尾酒", "weight": 2 }],
+      "hateFood": ["素", "小巧", "清淡"]
+    },
+    {
+      "id": 11,
+      "stringId": "Youmu",
+      "name": "魂魄妖梦",
+      "fundRange": [9999, 9999],
+      "enduranceLimit": 1,
+      "likeFood": [{ "tagId": 5, "tag": "传说", "weight": 1 }, { "tagId": 12, "tag": "和风", "weight": 1 }],
+      "likeBev": [{ "tagId": 11, "tag": "直饮", "weight": 1 }],
+      "hateFood": []
+    },
+    {
+      "id": 39,
+      "stringId": "Youmu_Free",
+      "name": "魂魄妖梦",
+      "fundRange": [300, 400],
+      "enduranceLimit": 1.3,
+      "likeFood": [{ "tagId": 3, "tag": "家常", "weight": 2 }, { "tagId": 7, "tag": "清淡", "weight": 1 }, { "tagId": 16, "tag": "鲜", "weight": 2 }, { "tagId": 23, "tag": "力量涌现", "weight": 1 }],
+      "likeBev": [{ "tagId": -1, "tag": "无酒精", "weight": 2 }, { "tagId": 4, "tag": "可加热", "weight": 1 }, { "tagId": 12, "tag": "水果", "weight": 2 }],
+      "hateFood": ["重油", "猎奇", "咸"]
+    },
+    {
+      "id": 40,
+      "stringId": "Yuyuko_Free",
+      "name": "西行寺幽幽子",
+      "fundRange": [1500, 2000],
+      "enduranceLimit": 1.4,
+      "likeFood": [{ "tagId": 0, "tag": "肉", "weight": 1 }, { "tagId": 1, "tag": "水产", "weight": 1 }, { "tagId": 4, "tag": "高级", "weight": 1 }, { "tagId": 5, "tag": "传说", "weight": 1 }, { "tagId": 12, "tag": "和风", "weight": 1 }, { "tagId": 14, "tag": "中华", "weight": 1 }, { "tagId": 9, "tag": "饱腹", "weight": 1 }, { "tagId": -1, "tag": "大份", "weight": 1 }],
+      "likeBev": [{ "tagId": 3, "tag": "可加冰", "weight": 2 }, { "tagId": 2, "tag": "高酒精", "weight": 1 }, { "tagId": 7, "tag": "鸡尾酒", "weight": 2 }],
+      "hateFood": ["素", "小巧", "清淡"]
+    },
+    {
+      "id": 26,
+      "stringId": "Yukari",
+      "name": "八云紫",
+      "fundRange": [1200, 1800],
+      "enduranceLimit": 1,
+      "likeFood": [{ "tagId": 0, "tag": "肉", "weight": 0 }],
+      "likeBev": [{ "tagId": 0, "tag": "低酒精", "weight": 0 }],
+      "hateFood": []
+    },
+    {
+      "id": 30,
+      "stringId": "MengChengGuo",
+      "name": "萌澄果",
+      "fundRange": [1200, 1600],
+      "enduranceLimit": 1,
+      "likeFood": [{ "tagId": 1, "tag": "水产", "weight": 1 }, { "tagId": 0, "tag": "肉", "weight": 1 }, { "tagId": 29, "tag": "梦幻", "weight": 1 }, { "tagId": 17, "tag": "甜", "weight": 1 }],
+      "likeBev": [{ "tagId": 12, "tag": "水果", "weight": 1 }, { "tagId": 13, "tag": "甘", "weight": 1 }, { "tagId": 3, "tag": "可加冰", "weight": 1 }, { "tagId": 14, "tag": "辛", "weight": 1 }],
+      "hateFood": ["猎奇", "灼热"]
+    },
+    {
+      "id": 31,
+      "stringId": "ThreeFairies",
+      "name": "蹦蹦跳跳的三妖精",
+      "fundRange": [300, 400],
+      "enduranceLimit": 1,
+      "likeFood": [{ "tagId": 28, "tag": "小巧", "weight": 1 }, { "tagId": 21, "tag": "凉爽", "weight": 1 }, { "tagId": 26, "tag": "菌类", "weight": 1 }, { "tagId": 17, "tag": "甜", "weight": 1 }, { "tagId": 3, "tag": "家常", "weight": 1 }, { "tagId": 29, "tag": "梦幻", "weight": 1 }],
+      "likeBev": [{ "tagId": -1, "tag": "无酒精", "weight": 1 }, { "tagId": 12, "tag": "水果", "weight": 1 }, { "tagId": 13, "tag": "甘", "weight": 1 }, { "tagId": 15, "tag": "苦", "weight": 1 }],
+      "hateFood": ["猎奇", "灼热", "生"]
+    },
+    {
+      "id": 32,
+      "stringId": "Mystia_Parallel",
+      "name": "米斯蒂娅(?)",
+      "fundRange": [1200, 1800],
+      "enduranceLimit": 1,
+      "likeFood": [],
+      "likeBev": [],
+      "hateFood": []
+    },
+    {
+      "id": 33,
+      "stringId": "Kyouko_Parallel",
+      "name": "幽谷响子(?)",
+      "fundRange": [1200, 1800],
+      "enduranceLimit": 1,
+      "likeFood": [],
+      "likeBev": [],
+      "hateFood": []
+    },
+    {
+      "id": 34,
+      "stringId": "Mystia_Current",
+      "name": "米斯蒂娅",
+      "fundRange": [1200, 1800],
+      "enduranceLimit": 1,
+      "likeFood": [],
+      "likeBev": [],
+      "hateFood": []
+    },
+    {
+      "id": 35,
+      "stringId": "Kyouko_Current",
+      "name": "幽谷响子",
+      "fundRange": [1200, 1800],
+      "enduranceLimit": 1,
+      "likeFood": [],
+      "likeBev": [],
+      "hateFood": []
+    },
+    {
+      "id": 36,
+      "stringId": "Rin",
+      "name": "冴月麟",
+      "fundRange": [400, 600],
+      "enduranceLimit": 1.2,
+      "likeFood": [{ "tagId": 3, "tag": "家常", "weight": 1 }, { "tagId": 1, "tag": "水产", "weight": 1 }, { "tagId": 14, "tag": "中华", "weight": 1 }, { "tagId": 34, "tag": "辣", "weight": 1 }],
+      "likeBev": [{ "tagId": -1, "tag": "无酒精", "weight": 1 }, { "tagId": 13, "tag": "甘", "weight": 1 }, { "tagId": 16, "tag": "气泡", "weight": 1 }],
+      "hateFood": ["重油", "生", "下酒"]
+    },
+    {
+      "id": 37,
+      "stringId": "Ushio",
+      "name": "立空汐",
+      "fundRange": [500, 800],
+      "enduranceLimit": 1.2,
+      "likeFood": [{ "tagId": 0, "tag": "肉", "weight": 1 }, { "tagId": 8, "tag": "下酒", "weight": 1 }, { "tagId": 12, "tag": "和风", "weight": 1 }, { "tagId": 10, "tag": "山珍", "weight": 1 }, { "tagId": 23, "tag": "力量涌现", "weight": 1 }, { "tagId": -3, "tag": "昂贵", "weight": 1 }],
+      "likeBev": [{ "tagId": 2, "tag": "高酒精", "weight": 1 }, { "tagId": 3, "tag": "可加冰", "weight": 1 }, { "tagId": 4, "tag": "可加热", "weight": 1 }],
+      "hateFood": ["素", "清淡"]
+    },
+    {
+      "id": 38,
+      "stringId": "Yuu",
+      "name": "时焉侑",
+      "fundRange": [1300, 1800],
+      "enduranceLimit": 1.3,
+      "likeFood": [{ "tagId": 5, "tag": "传说", "weight": 1 }, { "tagId": 8, "tag": "下酒", "weight": 1 }, { "tagId": 13, "tag": "西式", "weight": 1 }, { "tagId": 14, "tag": "中华", "weight": 1 }, { "tagId": 25, "tag": "文化底蕴", "weight": 1 }, { "tagId": 30, "tag": "特产", "weight": 1 }],
+      "likeBev": [{ "tagId": 3, "tag": "可加冰", "weight": 1 }, { "tagId": 1, "tag": "中酒精", "weight": 1 }, { "tagId": 7, "tag": "鸡尾酒", "weight": 1 }, { "tagId": 8, "tag": "西洋酒", "weight": 1 }],
+      "hateFood": ["水产", "饱腹", "重油"]
+    },
+    {
+      "id": 41,
+      "stringId": "TBS_Kokoro",
+      "name": "秦心",
+      "fundRange": [514, 805],
+      "enduranceLimit": 1.4,
+      "likeFood": [{ "tagId": 12, "tag": "和风", "weight": 1 }, { "tagId": 19, "tag": "招牌", "weight": 1 }, { "tagId": 5, "tag": "传说", "weight": 1 }, { "tagId": 29, "tag": "梦幻", "weight": 1 }, { "tagId": 21, "tag": "凉爽", "weight": 1 }, { "tagId": 20, "tag": "适合拍照", "weight": 1 }],
+      "likeBev": [{ "tagId": 5, "tag": "烧酒", "weight": 1 }, { "tagId": 1, "tag": "中酒精", "weight": 1 }, { "tagId": 17, "tag": "古典", "weight": 1 }, { "tagId": 13, "tag": "甘", "weight": 1 }],
+      "hateFood": ["咸", "灼热", "重油"]
+    },
+    {
+      "id": 1000,
+      "stringId": "Nitori",
+      "name": "河城荷取",
+      "fundRange": [400, 500],
+      "enduranceLimit": 1.2,
+      "likeFood": [{ "tagId": 24, "tag": "猎奇", "weight": 1 }, { "tagId": 1, "tag": "水产", "weight": 1 }, { "tagId": 4, "tag": "高级", "weight": 1 }, { "tagId": 8, "tag": "下酒", "weight": 1 }, { "tagId": 15, "tag": "咸", "weight": 1 }, { "tagId": 19, "tag": "招牌", "weight": 1 }],
+      "likeBev": [{ "tagId": 1, "tag": "中酒精", "weight": 1 }, { "tagId": 2, "tag": "高酒精", "weight": 1 }, { "tagId": 6, "tag": "清酒", "weight": 1 }, { "tagId": 11, "tag": "直饮", "weight": 1 }],
+      "hateFood": ["素", "文化底蕴", "山珍"]
+    },
+    {
+      "id": 1001,
+      "stringId": "Momizi",
+      "name": "犬走椛",
+      "fundRange": [300, 400],
+      "enduranceLimit": 1.2,
+      "likeFood": [{ "tagId": 0, "tag": "肉", "weight": 1 }, { "tagId": 10, "tag": "山珍", "weight": 1 }, { "tagId": 6, "tag": "重油", "weight": 1 }, { "tagId": -1, "tag": "大份", "weight": 1 }, { "tagId": 8, "tag": "下酒", "weight": 1 }],
+      "likeBev": [{ "tagId": 1, "tag": "中酒精", "weight": 1 }, { "tagId": 2, "tag": "高酒精", "weight": 1 }, { "tagId": 11, "tag": "直饮", "weight": 1 }],
+      "hateFood": ["猎奇", "清淡", "素"]
+    },
+    {
+      "id": 1005,
+      "stringId": "DLC1_Sanae",
+      "name": "东风谷早苗",
+      "fundRange": [400, 600],
+      "enduranceLimit": 1.2,
+      "likeFood": [{ "tagId": 12, "tag": "和风", "weight": 2 }, { "tagId": 17, "tag": "甜", "weight": 2 }, { "tagId": 20, "tag": "适合拍照", "weight": 2 }, { "tagId": 3, "tag": "家常", "weight": 1 }, { "tagId": 29, "tag": "梦幻", "weight": 1 }],
+      "likeBev": [{ "tagId": -1, "tag": "无酒精", "weight": 1 }, { "tagId": 0, "tag": "低酒精", "weight": 1 }, { "tagId": 12, "tag": "水果", "weight": 1 }, { "tagId": 11, "tag": "直饮", "weight": 1 }, { "tagId": 13, "tag": "甘", "weight": 1 }, { "tagId": 15, "tag": "苦", "weight": 1 }, { "tagId": 18, "tag": "现代", "weight": 1 }, { "tagId": 16, "tag": "气泡", "weight": 1 }, { "tagId": 6, "tag": "清酒", "weight": 1 }],
+      "hateFood": ["猎奇", "生", "重油", "灼热"]
+    },
+    {
+      "id": 1002,
+      "stringId": "Alice",
+      "name": "爱丽丝",
+      "fundRange": [500, 800],
+      "enduranceLimit": 1.3,
+      "likeFood": [{ "tagId": 3, "tag": "家常", "weight": 1 }, { "tagId": 4, "tag": "高级", "weight": 1 }, { "tagId": 13, "tag": "西式", "weight": 1 }, { "tagId": 17, "tag": "甜", "weight": 1 }, { "tagId": 25, "tag": "文化底蕴", "weight": 1 }],
+      "likeBev": [{ "tagId": 0, "tag": "低酒精", "weight": 1 }, { "tagId": 8, "tag": "西洋酒", "weight": 1 }, { "tagId": 18, "tag": "现代", "weight": 1 }],
+      "hateFood": ["肉", "重油", "饱腹", "猎奇"]
+    },
+    {
+      "id": 1004,
+      "stringId": "Narumi",
+      "name": "矢田寺成美",
+      "fundRange": [300, 600],
+      "enduranceLimit": 1.1,
+      "likeFood": [{ "tagId": 7, "tag": "清淡", "weight": 1 }, { "tagId": 10, "tag": "山珍", "weight": 1 }, { "tagId": 25, "tag": "文化底蕴", "weight": 1 }, { "tagId": 30, "tag": "特产", "weight": 1 }, { "tagId": 12, "tag": "和风", "weight": 1 }],
+      "likeBev": [{ "tagId": 0, "tag": "低酒精", "weight": 1 }, { "tagId": 1, "tag": "中酒精", "weight": 1 }, { "tagId": 11, "tag": "直饮", "weight": 1 }, { "tagId": 3, "tag": "可加冰", "weight": 1 }, { "tagId": 17, "tag": "古典", "weight": 1 }],
+      "hateFood": ["重油", "饱腹"]
+    },
+    {
+      "id": 1003,
+      "stringId": "Toutetsu",
+      "name": "饕餮尤魔",
+      "fundRange": [9999, 9999],
+      "enduranceLimit": 1,
+      "likeFood": [{ "tagId": 9, "tag": "饱腹", "weight": 1 }, { "tagId": -1, "tag": "大份", "weight": 1 }, { "tagId": 0, "tag": "肉", "weight": 1 }, { "tagId": 4, "tag": "高级", "weight": 1 }, { "tagId": 5, "tag": "传说", "weight": 1 }, { "tagId": 18, "tag": "生", "weight": 1 }, { "tagId": 16, "tag": "鲜", "weight": 1 }, { "tagId": 23, "tag": "力量涌现", "weight": 1 }, { "tagId": 27, "tag": "不可思议", "weight": 1 }],
+      "likeBev": [{ "tagId": 2, "tag": "高酒精", "weight": 1 }, { "tagId": 11, "tag": "直饮", "weight": 1 }, { "tagId": 14, "tag": "辛", "weight": 1 }, { "tagId": 5, "tag": "烧酒", "weight": 1 }],
+      "hateFood": []
+    },
+    {
+      "id": 1007,
+      "stringId": "Yumeko",
+      "name": "梦子",
+      "fundRange": [0, 0],
+      "enduranceLimit": 0,
+      "likeFood": [],
+      "likeBev": [],
+      "hateFood": []
+    },
+    {
+      "id": 1006,
+      "stringId": "Kagiyama",
+      "name": "键山雏",
+      "fundRange": [0, 0],
+      "enduranceLimit": 0,
+      "likeFood": [],
+      "likeBev": [],
+      "hateFood": []
+    },
+    {
+      "id": 2000,
+      "stringId": "Yamame",
+      "name": "黑谷山女",
+      "fundRange": [250, 400],
+      "enduranceLimit": 1.2,
+      "likeFood": [{ "tagId": 17, "tag": "甜", "weight": 1 }, { "tagId": 16, "tag": "鲜", "weight": 2 }, { "tagId": 24, "tag": "猎奇", "weight": 2 }, { "tagId": 20, "tag": "适合拍照", "weight": 1 }, { "tagId": 18, "tag": "生", "weight": 2 }],
+      "likeBev": [{ "tagId": 0, "tag": "低酒精", "weight": 2 }, { "tagId": 1, "tag": "中酒精", "weight": 1 }, { "tagId": 10, "tag": "啤酒", "weight": 2 }, { "tagId": 13, "tag": "甘", "weight": 1 }],
+      "hateFood": ["咸", "重油", "灼热"]
+    },
+    {
+      "id": 2001,
+      "stringId": "Parsee",
+      "name": "水桥帕露西",
+      "fundRange": [300, 400],
+      "enduranceLimit": 1.2,
+      "likeFood": [{ "tagId": 2000, "tag": "酸", "weight": 2 }, { "tagId": 15, "tag": "咸", "weight": 2 }, { "tagId": 34, "tag": "辣", "weight": 1 }, { "tagId": 16, "tag": "鲜", "weight": 1 }, { "tagId": 31, "tag": "果味", "weight": 1 }, { "tagId": 0, "tag": "肉", "weight": 2 }],
+      "likeBev": [{ "tagId": -1, "tag": "无酒精", "weight": 2 }, { "tagId": 4, "tag": "可加热", "weight": 1 }, { "tagId": 11, "tag": "直饮", "weight": 2 }, { "tagId": 15, "tag": "苦", "weight": 1 }, { "tagId": 14, "tag": "辛", "weight": 1 }],
+      "hateFood": ["甜"]
+    },
+    {
+      "id": 2002,
+      "stringId": "Yuugi",
+      "name": "星熊勇仪",
+      "fundRange": [600, 1000],
+      "enduranceLimit": 1.5,
+      "likeFood": [{ "tagId": 8, "tag": "下酒", "weight": 2 }, { "tagId": 19, "tag": "招牌", "weight": 2 }, { "tagId": 5, "tag": "传说", "weight": 1 }, { "tagId": 12, "tag": "和风", "weight": 1 }, { "tagId": -1, "tag": "大份", "weight": 1 }, { "tagId": 23, "tag": "力量涌现", "weight": 2 }, { "tagId": 35, "tag": "燃起来了", "weight": 2 }],
+      "likeBev": [{ "tagId": 2, "tag": "高酒精", "weight": 2 }, { "tagId": 10, "tag": "啤酒", "weight": 1 }, { "tagId": 17, "tag": "古典", "weight": 2 }, { "tagId": 6, "tag": "清酒", "weight": 1 }],
+      "hateFood": ["素", "猎奇", "小巧"]
+    },
+    {
+      "id": 2003,
+      "stringId": "Satori",
+      "name": "古明地觉",
+      "fundRange": [500, 600],
+      "enduranceLimit": 1.5,
+      "likeFood": [{ "tagId": 3, "tag": "家常", "weight": 2 }, { "tagId": 28, "tag": "小巧", "weight": 1 }, { "tagId": 17, "tag": "甜", "weight": 2 }, { "tagId": 29, "tag": "梦幻", "weight": 1 }, { "tagId": 30, "tag": "特产", "weight": 1 }, { "tagId": 23, "tag": "力量涌现", "weight": 1 }],
+      "likeBev": [{ "tagId": -1, "tag": "无酒精", "weight": 2 }, { "tagId": 15, "tag": "苦", "weight": 2 }, { "tagId": 16, "tag": "气泡", "weight": 2 }, { "tagId": 19, "tag": "提神", "weight": 1 }],
+      "hateFood": ["肉", "山珍", "灼热", "猎奇", "大份"]
+    },
+    {
+      "id": 2004,
+      "stringId": "Orin",
+      "name": "火焰猫燐",
+      "fundRange": [500, 700],
+      "enduranceLimit": 1.3,
+      "likeFood": [{ "tagId": 16, "tag": "鲜", "weight": 2 }, { "tagId": 17, "tag": "甜", "weight": 1 }, { "tagId": 1, "tag": "水产", "weight": 2 }, { "tagId": 11, "tag": "海味", "weight": 1 }, { "tagId": 24, "tag": "猎奇", "weight": 1 }, { "tagId": 29, "tag": "梦幻", "weight": 1 }],
+      "likeBev": [{ "tagId": 0, "tag": "低酒精", "weight": 1 }, { "tagId": 12, "tag": "水果", "weight": 2 }, { "tagId": 6, "tag": "清酒", "weight": 1 }],
+      "hateFood": ["生", "灼热"]
+    },
+    {
+      "id": 2005,
+      "stringId": "Utsuho",
+      "name": "灵乌路空",
+      "fundRange": [500, 800],
+      "enduranceLimit": 1.3,
+      "likeFood": [{ "tagId": 0, "tag": "肉", "weight": 2 }, { "tagId": 34, "tag": "辣", "weight": 1 }, { "tagId": 15, "tag": "咸", "weight": 1 }, { "tagId": 6, "tag": "重油", "weight": 2 }, { "tagId": 22, "tag": "灼热", "weight": 1 }, { "tagId": 23, "tag": "力量涌现", "weight": 2 }],
+      "likeBev": [{ "tagId": 1, "tag": "中酒精", "weight": 2 }, { "tagId": 4, "tag": "可加热", "weight": 1 }, { "tagId": 7, "tag": "鸡尾酒", "weight": 2 }],
+      "hateFood": ["清淡", "菌类"]
+    },
+    {
+      "id": 2006,
+      "stringId": "Koishi",
+      "name": "古明地恋",
+      "fundRange": [800, 1200],
+      "enduranceLimit": 1.5,
+      "likeFood": [{ "tagId": 17, "tag": "甜", "weight": 2 }, { "tagId": 15, "tag": "咸", "weight": 2 }, { "tagId": 18, "tag": "生", "weight": 1 }, { "tagId": 24, "tag": "猎奇", "weight": 2 }, { "tagId": 29, "tag": "梦幻", "weight": 2 }, { "tagId": 27, "tag": "不可思议", "weight": 1 }],
+      "likeBev": [{ "tagId": 2, "tag": "高酒精", "weight": 1 }, { "tagId": 15, "tag": "苦", "weight": 2 }, { "tagId": 5, "tag": "烧酒", "weight": 1 }, { "tagId": 16, "tag": "气泡", "weight": 2 }],
+      "hateFood": []
+    },
+    {
+      "id": 2007,
+      "stringId": "Kisume",
+      "name": "琪斯美",
+      "fundRange": [6666, 6666],
+      "enduranceLimit": 1,
+      "likeFood": [],
+      "likeBev": [],
+      "hateFood": []
+    },
+    {
+      "id": 2008,
+      "stringId": "Komachi",
+      "name": "小野塚小町",
+      "fundRange": [6666, 6666],
+      "enduranceLimit": 1,
+      "likeFood": [],
+      "likeBev": [],
+      "hateFood": []
+    },
+    {
+      "id": 2009,
+      "stringId": "Orin_Ghost",
+      "name": "地底怨灵",
+      "fundRange": [500, 700],
+      "enduranceLimit": 1,
+      "likeFood": [{ "tagId": 16, "tag": "鲜", "weight": 2 }, { "tagId": 17, "tag": "甜", "weight": 1 }, { "tagId": 1, "tag": "水产", "weight": 2 }, { "tagId": 11, "tag": "海味", "weight": 1 }, { "tagId": 24, "tag": "猎奇", "weight": 1 }, { "tagId": 29, "tag": "梦幻", "weight": 1 }],
+      "likeBev": [{ "tagId": 0, "tag": "低酒精", "weight": 1 }, { "tagId": 12, "tag": "水果", "weight": 2 }, { "tagId": 6, "tag": "清酒", "weight": 1 }],
+      "hateFood": ["猎奇", "生", "灼热"]
+    },
+    {
+      "id": 2500,
+      "stringId": "Okina",
+      "name": "摩多罗隐岐奈",
+      "fundRange": [9999, 9999],
+      "enduranceLimit": 1,
+      "likeFood": [],
+      "likeBev": [],
+      "hateFood": []
+    },
+    {
+      "id": 2501,
+      "stringId": "Mai",
+      "name": "丁礼田舞",
+      "fundRange": [9999, 9999],
+      "enduranceLimit": 1,
+      "likeFood": [],
+      "likeBev": [],
+      "hateFood": []
+    },
+    {
+      "id": 2502,
+      "stringId": "Satono",
+      "name": "尔子田里乃",
+      "fundRange": [9999, 9999],
+      "enduranceLimit": 1,
+      "likeFood": [],
+      "likeBev": [],
+      "hateFood": []
+    },
+    {
+      "id": 2503,
+      "stringId": "Kokoro",
+      "name": "秦心",
+      "fundRange": [9999, 9999],
+      "enduranceLimit": 1,
+      "likeFood": [],
+      "likeBev": [],
+      "hateFood": []
+    },
+    {
+      "id": 2504,
+      "stringId": "Raiko",
+      "name": "堀川雷鼓",
+      "fundRange": [9999, 9999],
+      "enduranceLimit": 1,
+      "likeFood": [],
+      "likeBev": [],
+      "hateFood": []
+    },
+    {
+      "id": 2505,
+      "stringId": "Benben",
+      "name": "九十九弁弁",
+      "fundRange": [9999, 9999],
+      "enduranceLimit": 1,
+      "likeFood": [],
+      "likeBev": [],
+      "hateFood": []
+    },
+    {
+      "id": 2506,
+      "stringId": "Yatsuhashi",
+      "name": "九十九八桥",
+      "fundRange": [9999, 9999],
+      "enduranceLimit": 1,
+      "likeFood": [],
+      "likeBev": [],
+      "hateFood": []
+    },
+    {
+      "id": 2507,
+      "stringId": "Lunasa",
+      "name": "露娜萨",
+      "fundRange": [9999, 9999],
+      "enduranceLimit": 1,
+      "likeFood": [],
+      "likeBev": [],
+      "hateFood": []
+    },
+    {
+      "id": 2508,
+      "stringId": "Merlin",
+      "name": "梅露兰",
+      "fundRange": [9999, 9999],
+      "enduranceLimit": 1,
+      "likeFood": [],
+      "likeBev": [],
+      "hateFood": []
+    },
+    {
+      "id": 2509,
+      "stringId": "Lyrica",
+      "name": "莉莉卡",
+      "fundRange": [9999, 9999],
+      "enduranceLimit": 1,
+      "likeFood": [],
+      "likeBev": [],
+      "hateFood": []
+    },
+    {
+      "id": 3000,
+      "stringId": "TataraKogasa",
+      "name": "多多良小伞",
+      "fundRange": [150, 300],
+      "enduranceLimit": 1.2,
+      "likeFood": [{ "tagId": 17, "tag": "甜", "weight": 2 }, { "tagId": 24, "tag": "猎奇", "weight": 2 }, { "tagId": 3, "tag": "家常", "weight": 1 }, { "tagId": 9, "tag": "饱腹", "weight": 1 }, { "tagId": 27, "tag": "不可思议", "weight": 1 }, { "tagId": 23, "tag": "力量涌现", "weight": 2 }, { "tagId": 20, "tag": "适合拍照", "weight": 1 }],
+      "likeBev": [{ "tagId": 1, "tag": "中酒精", "weight": 1 }, { "tagId": 12, "tag": "水果", "weight": 2 }, { "tagId": 3, "tag": "可加冰", "weight": 1 }, { "tagId": 17, "tag": "古典", "weight": 1 }],
+      "hateFood": ["辣", "灼热", "汤羹"]
+    },
+    {
+      "id": 3001,
+      "stringId": "MurasaMinamitu",
+      "name": "村纱水蜜",
+      "fundRange": [400, 600],
+      "enduranceLimit": 1.5,
+      "likeFood": [{ "tagId": 9, "tag": "饱腹", "weight": 1 }, { "tagId": 15, "tag": "咸", "weight": 1 }, { "tagId": 23, "tag": "力量涌现", "weight": 2 }, { "tagId": 0, "tag": "肉", "weight": 2 }, { "tagId": 30, "tag": "特产", "weight": 2 }, { "tagId": 4, "tag": "高级", "weight": 1 }, { "tagId": 16, "tag": "鲜", "weight": 2 }],
+      "likeBev": [{ "tagId": 2, "tag": "高酒精", "weight": 2 }, { "tagId": 8, "tag": "西洋酒", "weight": 1 }, { "tagId": 3, "tag": "可加冰", "weight": 1 }, { "tagId": 14, "tag": "辛", "weight": 2 }],
+      "hateFood": ["素", "猎奇", "小巧", "酸"]
+    },
+    {
+      "id": 3002,
+      "stringId": "HoujuuNue",
+      "name": "封兽鵺",
+      "fundRange": [300, 500],
+      "enduranceLimit": 1.3,
+      "likeFood": [{ "tagId": 24, "tag": "猎奇", "weight": 2 }, { "tagId": 0, "tag": "肉", "weight": 1 }, { "tagId": 16, "tag": "鲜", "weight": 2 }, { "tagId": 18, "tag": "生", "weight": 2 }, { "tagId": 27, "tag": "不可思议", "weight": 1 }, { "tagId": 19, "tag": "招牌", "weight": 2 }, { "tagId": 30, "tag": "特产", "weight": 2 }, { "tagId": 20, "tag": "适合拍照", "weight": 1 }],
+      "likeBev": [{ "tagId": 17, "tag": "古典", "weight": 1 }, { "tagId": 4, "tag": "可加热", "weight": 1 }, { "tagId": 11, "tag": "直饮", "weight": 1 }, { "tagId": 5, "tag": "烧酒", "weight": 1 }],
+      "hateFood": ["酸", "西式"]
+    },
+    {
+      "id": 3003,
+      "stringId": "MononobeFuto",
+      "name": "物部布都",
+      "fundRange": [600, 900],
+      "enduranceLimit": 1.4,
+      "likeFood": [{ "tagId": 12, "tag": "和风", "weight": 2 }, { "tagId": 35, "tag": "燃起来了", "weight": 1 }, { "tagId": 5, "tag": "传说", "weight": 1 }, { "tagId": 7, "tag": "清淡", "weight": 2 }, { "tagId": 10, "tag": "山珍", "weight": 2 }, { "tagId": 4, "tag": "高级", "weight": 2 }],
+      "likeBev": [{ "tagId": 11, "tag": "直饮", "weight": 2 }, { "tagId": 4, "tag": "可加热", "weight": 2 }, { "tagId": 16, "tag": "气泡", "weight": 1 }, { "tagId": 1, "tag": "中酒精", "weight": 1 }],
+      "hateFood": ["西式", "生"]
+    },
+    {
+      "id": 3004,
+      "stringId": "KakuSeiga",
+      "name": "霍青娥",
+      "fundRange": [400, 900],
+      "enduranceLimit": 1.4,
+      "likeFood": [{ "tagId": 17, "tag": "甜", "weight": 2 }, { "tagId": 2, "tag": "素", "weight": 1 }, { "tagId": 28, "tag": "小巧", "weight": 2 }, { "tagId": 14, "tag": "中华", "weight": 1 }, { "tagId": 27, "tag": "不可思议", "weight": 1 }, { "tagId": 5, "tag": "传说", "weight": 1 }, { "tagId": 30, "tag": "特产", "weight": 2 }],
+      "likeBev": [{ "tagId": 18, "tag": "现代", "weight": 2 }, { "tagId": 6, "tag": "清酒", "weight": 2 }, { "tagId": 0, "tag": "低酒精", "weight": 1 }, { "tagId": 12, "tag": "水果", "weight": 1 }],
+      "hateFood": ["重油", "饱腹"]
+    },
+    {
+      "id": 3005,
+      "stringId": "SogaToziko",
+      "name": "苏我屠自古",
+      "fundRange": [500, 600],
+      "enduranceLimit": 1.5,
+      "likeFood": [{ "tagId": 12, "tag": "和风", "weight": 1 }, { "tagId": 9, "tag": "饱腹", "weight": 2 }, { "tagId": 23, "tag": "力量涌现", "weight": 2 }, { "tagId": 6, "tag": "重油", "weight": 2 }, { "tagId": 33, "tag": "烧烤", "weight": 1 }, { "tagId": 3, "tag": "家常", "weight": 2 }, { "tagId": 19, "tag": "招牌", "weight": 1 }],
+      "likeBev": [{ "tagId": 10, "tag": "啤酒", "weight": 1 }, { "tagId": 15, "tag": "苦", "weight": 1 }, { "tagId": 5, "tag": "烧酒", "weight": 1 }, { "tagId": 2, "tag": "高酒精", "weight": 1 }],
+      "hateFood": ["凉爽", "甜"]
+    },
+    {
+      "id": 3006,
+      "stringId": "KumoiIchirin",
+      "name": "云居一轮",
+      "fundRange": [500, 600],
+      "enduranceLimit": 0,
+      "likeFood": [],
+      "likeBev": [],
+      "hateFood": []
+    },
+    {
+      "id": 3007,
+      "stringId": "Unzan",
+      "name": "云山",
+      "fundRange": [500, 600],
+      "enduranceLimit": 0,
+      "likeFood": [],
+      "likeBev": [],
+      "hateFood": []
+    },
+    {
+      "id": 3008,
+      "stringId": "MiyakoYoshika",
+      "name": "宫古芳香",
+      "fundRange": [500, 600],
+      "enduranceLimit": 0,
+      "likeFood": [],
+      "likeBev": [],
+      "hateFood": []
+    },
+    {
+      "id": 3009,
+      "stringId": "HutatsuiwaMamizou",
+      "name": "二岩猯藏",
+      "fundRange": [1000, 1200],
+      "enduranceLimit": 2,
+      "likeFood": [{ "tagId": 0, "tag": "肉", "weight": 2 }, { "tagId": 12, "tag": "和风", "weight": 2 }, { "tagId": 1, "tag": "水产", "weight": 1 }, { "tagId": 3, "tag": "家常", "weight": 1 }, { "tagId": 8, "tag": "下酒", "weight": 2 }, { "tagId": 31, "tag": "果味", "weight": 1 }, { "tagId": 5, "tag": "传说", "weight": 1 }],
+      "likeBev": [{ "tagId": 17, "tag": "古典", "weight": 1 }, { "tagId": 4, "tag": "可加热", "weight": 1 }, { "tagId": 5, "tag": "烧酒", "weight": 1 }, { "tagId": 2, "tag": "高酒精", "weight": 1 }],
+      "hateFood": ["灼热", "辣"]
+    },
+    {
+      "id": 3010,
+      "stringId": "HijiriByakuren",
+      "name": "圣白莲",
+      "fundRange": [500, 600],
+      "enduranceLimit": 0,
+      "likeFood": [],
+      "likeBev": [],
+      "hateFood": []
+    },
+    {
+      "id": 3011,
+      "stringId": "ToyosatomimiNoMiko",
+      "name": "丰聪耳神子",
+      "fundRange": [500, 600],
+      "enduranceLimit": 0,
+      "likeFood": [],
+      "likeBev": [],
+      "hateFood": []
+    },
+    {
+      "id": 3012,
+      "stringId": "Nazrin",
+      "name": "娜兹玲",
+      "fundRange": [300, 600],
+      "enduranceLimit": 0,
+      "likeFood": [],
+      "likeBev": [],
+      "hateFood": []
+    },
+    {
+      "id": 4000,
+      "stringId": "ShameimaruAya",
+      "name": "射命丸文",
+      "fundRange": [500, 600],
+      "enduranceLimit": 1.3,
+      "likeFood": [{ "tagId": 0, "tag": "肉", "weight": 1 }, { "tagId": 12, "tag": "和风", "weight": 1 }, { "tagId": 19, "tag": "招牌", "weight": 3 }, { "tagId": 3, "tag": "家常", "weight": 2 }, { "tagId": 8, "tag": "下酒", "weight": 2 }, { "tagId": 20, "tag": "适合拍照", "weight": 3 }],
+      "likeBev": [{ "tagId": 2, "tag": "高酒精", "weight": 3 }, { "tagId": 5, "tag": "烧酒", "weight": 1 }, { "tagId": 19, "tag": "提神", "weight": 2 }, { "tagId": 3, "tag": "可加冰", "weight": 2 }],
+      "hateFood": ["西式"]
+    },
+    {
+      "id": 4001,
+      "stringId": "Medicine",
+      "name": "梅蒂欣",
+      "fundRange": [200, 400],
+      "enduranceLimit": 1.1,
+      "likeFood": [{ "tagId": 17, "tag": "甜", "weight": 3 }, { "tagId": 29, "tag": "梦幻", "weight": 2 }, { "tagId": 26, "tag": "菌类", "weight": 2 }, { "tagId": 20, "tag": "适合拍照", "weight": 2 }, { "tagId": 19, "tag": "招牌", "weight": 1 }, { "tagId": 21, "tag": "凉爽", "weight": 1 }, { "tagId": 28, "tag": "小巧", "weight": 2 }, { "tagId": 4001, "tag": "毒", "weight": 2 }],
+      "likeBev": [{ "tagId": -1, "tag": "无酒精", "weight": 2 }, { "tagId": 12, "tag": "水果", "weight": 2 }, { "tagId": 13, "tag": "甘", "weight": 1 }, { "tagId": 15, "tag": "苦", "weight": 1 }],
+      "hateFood": ["文化底蕴"]
+    },
+    {
+      "id": 4002,
+      "stringId": "KazamiYuuka",
+      "name": "风见幽香",
+      "fundRange": [1200, 1800],
+      "enduranceLimit": 1.3,
+      "likeFood": [{ "tagId": 7, "tag": "清淡", "weight": 2 }, { "tagId": 4, "tag": "高级", "weight": 2 }, { "tagId": 29, "tag": "梦幻", "weight": 3 }, { "tagId": 5, "tag": "传说", "weight": 3 }, { "tagId": 30, "tag": "特产", "weight": 2 }, { "tagId": 13, "tag": "西式", "weight": 2 }, { "tagId": 27, "tag": "不可思议", "weight": 3 }],
+      "likeBev": [{ "tagId": 18, "tag": "现代", "weight": 2 }, { "tagId": 9, "tag": "利口酒", "weight": 1 }, { "tagId": 8, "tag": "西洋酒", "weight": 2 }, { "tagId": 7, "tag": "鸡尾酒", "weight": 1 }],
+      "hateFood": ["灼热", "咸", "和风", "饱腹"]
+    },
+    {
+      "id": 4003,
+      "stringId": "KijinSeija",
+      "name": "鬼人正邪",
+      "fundRange": [300, 600],
+      "enduranceLimit": 1.1,
+      "likeFood": [{ "tagId": 24, "tag": "猎奇", "weight": 2 }, { "tagId": 8, "tag": "下酒", "weight": 2 }, { "tagId": 6, "tag": "重油", "weight": 1 }, { "tagId": 22, "tag": "灼热", "weight": 1 }, { "tagId": 35, "tag": "燃起来了", "weight": 2 }, { "tagId": 27, "tag": "不可思议", "weight": 1 }, { "tagId": 23, "tag": "力量涌现", "weight": 2 }],
+      "likeBev": [{ "tagId": 1, "tag": "中酒精", "weight": 2 }, { "tagId": 5, "tag": "烧酒", "weight": 1 }, { "tagId": 14, "tag": "辛", "weight": 1 }, { "tagId": 11, "tag": "直饮", "weight": 2 }],
+      "hateFood": ["高级"]
+    },
+    {
+      "id": 4004,
+      "stringId": "SukunaShinmyoumaru",
+      "name": "少名针妙丸",
+      "fundRange": [600, 1200],
+      "enduranceLimit": 1.4,
+      "likeFood": [{ "tagId": 17, "tag": "甜", "weight": 2 }, { "tagId": 12, "tag": "和风", "weight": 2 }, { "tagId": 5, "tag": "传说", "weight": 2 }, { "tagId": 28, "tag": "小巧", "weight": 3 }, { "tagId": 25, "tag": "文化底蕴", "weight": 1 }, { "tagId": 20, "tag": "适合拍照", "weight": 1 }, { "tagId": 35, "tag": "燃起来了", "weight": 2 }],
+      "likeBev": [{ "tagId": 17, "tag": "古典", "weight": 2 }, { "tagId": 4, "tag": "可加热", "weight": 1 }, { "tagId": 0, "tag": "低酒精", "weight": 1 }, { "tagId": 16, "tag": "气泡", "weight": 2 }],
+      "hateFood": ["大份", "西式"]
+    },
+    {
+      "id": 4005,
+      "stringId": "ImaizumiKagerou",
+      "name": "今泉影狼",
+      "fundRange": [300, 600],
+      "enduranceLimit": 1.2,
+      "likeFood": [{ "tagId": 0, "tag": "肉", "weight": 3 }, { "tagId": 12, "tag": "和风", "weight": 1 }, { "tagId": 10, "tag": "山珍", "weight": 3 }, { "tagId": 3, "tag": "家常", "weight": 2 }, { "tagId": 21, "tag": "凉爽", "weight": 1 }, { "tagId": 20, "tag": "适合拍照", "weight": 3 }],
+      "likeBev": [{ "tagId": 1, "tag": "中酒精", "weight": 2 }, { "tagId": 6, "tag": "清酒", "weight": 1 }, { "tagId": 11, "tag": "直饮", "weight": 1 }, { "tagId": 3, "tag": "可加冰", "weight": 1 }],
+      "hateFood": ["灼热"]
+    },
+    {
+      "id": 4006,
+      "stringId": "Flandre",
+      "name": "芙兰朵露",
+      "fundRange": [1111, 1111],
+      "enduranceLimit": 1,
+      "likeFood": [],
+      "likeBev": [],
+      "hateFood": []
+    },
+    {
+      "id": 4007,
+      "stringId": "Wakasagihime",
+      "name": "若鹭姬",
+      "fundRange": [1111, 1111],
+      "enduranceLimit": 1,
+      "likeFood": [],
+      "likeBev": [],
+      "hateFood": []
+    },
+    {
+      "id": 4008,
+      "stringId": "DLC4_Remilia",
+      "name": "蕾米莉亚",
+      "fundRange": [4950, 5000],
+      "enduranceLimit": 1.05,
+      "likeFood": [{ "tagId": 13, "tag": "西式", "weight": 2 }, { "tagId": 4, "tag": "高级", "weight": 1 }, { "tagId": 18, "tag": "生", "weight": 1 }, { "tagId": 17, "tag": "甜", "weight": 1 }, { "tagId": 5, "tag": "传说", "weight": 1 }],
+      "likeBev": [{ "tagId": 13, "tag": "甘", "weight": 1 }, { "tagId": 17, "tag": "古典", "weight": 1 }, { "tagId": 8, "tag": "西洋酒", "weight": 1 }, { "tagId": 12, "tag": "水果", "weight": 1 }, { "tagId": 2, "tag": "高酒精", "weight": 1 }],
+      "hateFood": ["咸", "辣", "酸", "实惠"]
+    },
+    {
+      "id": 4009,
+      "stringId": "Larva",
+      "name": "拉尔瓦",
+      "fundRange": [1111, 1111],
+      "enduranceLimit": 1,
+      "likeFood": [{ "tagId": 0, "tag": "肉", "weight": 1 }],
+      "likeBev": [{ "tagId": 0, "tag": "低酒精", "weight": 1 }],
+      "hateFood": ["肉"]
+    },
+    {
+      "id": 4010,
+      "stringId": "Sekibanki",
+      "name": "赤蛮奇",
+      "fundRange": [1111, 1111],
+      "enduranceLimit": 1,
+      "likeFood": [{ "tagId": 0, "tag": "肉", "weight": 1 }],
+      "likeBev": [{ "tagId": 0, "tag": "低酒精", "weight": 1 }],
+      "hateFood": ["肉"]
+    },
+    {
+      "id": 4011,
+      "stringId": "Sekibanki_OnlyHead",
+      "name": "赤蛮奇",
+      "fundRange": [1111, 1111],
+      "enduranceLimit": 1,
+      "likeFood": [{ "tagId": 0, "tag": "肉", "weight": 1 }],
+      "likeBev": [{ "tagId": 0, "tag": "低酒精", "weight": 1 }],
+      "hateFood": ["肉"]
+    },
+    {
+      "id": 4012,
+      "stringId": "Sekibanki_WithHead",
+      "name": "赤蛮奇",
+      "fundRange": [1111, 1111],
+      "enduranceLimit": 1,
+      "likeFood": [{ "tagId": 0, "tag": "肉", "weight": 1 }],
+      "likeBev": [{ "tagId": 0, "tag": "低酒精", "weight": 1 }],
+      "hateFood": ["肉"]
+    },
+    {
+      "id": 4013,
+      "stringId": "Flandre_Joy",
+      "name": "芙兰朵露·喜",
+      "fundRange": [0, 0],
+      "enduranceLimit": 1,
+      "likeFood": [],
+      "likeBev": [],
+      "hateFood": []
+    },
+    {
+      "id": 4014,
+      "stringId": "Flandre_Angry",
+      "name": "芙兰朵露·怒",
+      "fundRange": [0, 0],
+      "enduranceLimit": 1,
+      "likeFood": [],
+      "likeBev": [],
+      "hateFood": []
+    },
+    {
+      "id": 4015,
+      "stringId": "Flandre_Sad",
+      "name": "芙兰朵露·哀",
+      "fundRange": [0, 0],
+      "enduranceLimit": 1,
+      "likeFood": [],
+      "likeBev": [],
+      "hateFood": []
+    },
+    {
+      "id": 4016,
+      "stringId": "Flandre_Happy",
+      "name": "芙兰朵露·乐",
+      "fundRange": [0, 0],
+      "enduranceLimit": 1,
+      "likeFood": [],
+      "likeBev": [],
+      "hateFood": []
+    },
+    {
+      "id": 5000,
+      "stringId": "Reisen2",
+      "name": "铃仙",
+      "fundRange": [200, 350],
+      "enduranceLimit": 1,
+      "likeFood": [{ "tagId": 30, "tag": "特产", "weight": 2 }, { "tagId": 28, "tag": "小巧", "weight": 2 }, { "tagId": 3, "tag": "家常", "weight": 2 }, { "tagId": 11, "tag": "海味", "weight": 1 }, { "tagId": 14, "tag": "中华", "weight": 1 }, { "tagId": 10, "tag": "山珍", "weight": 1 }, { "tagId": 17, "tag": "甜", "weight": 2 }],
+      "likeBev": [{ "tagId": 2, "tag": "高酒精", "weight": 2 }, { "tagId": 5, "tag": "烧酒", "weight": 2 }, { "tagId": 10, "tag": "啤酒", "weight": 1 }, { "tagId": 15, "tag": "苦", "weight": 1 }, { "tagId": 4, "tag": "可加热", "weight": 2 }],
+      "hateFood": ["昂贵", "不可思议"]
+    },
+    {
+      "id": 5001,
+      "stringId": "Toyohime",
+      "name": "绵月丰姬",
+      "fundRange": [1200, 1500],
+      "enduranceLimit": 1,
+      "likeFood": [{ "tagId": 17, "tag": "甜", "weight": 2 }, { "tagId": 4, "tag": "高级", "weight": 2 }, { "tagId": 12, "tag": "和风", "weight": 3 }, { "tagId": 2, "tag": "素", "weight": 1 }, { "tagId": 21, "tag": "凉爽", "weight": 1 }, { "tagId": 31, "tag": "果味", "weight": 3 }, { "tagId": 25, "tag": "文化底蕴", "weight": 2 }],
+      "likeBev": [{ "tagId": 2, "tag": "高酒精", "weight": 1 }, { "tagId": 6, "tag": "清酒", "weight": 2 }, { "tagId": 17, "tag": "古典", "weight": 2 }, { "tagId": 12, "tag": "水果", "weight": 1 }, { "tagId": 3, "tag": "可加冰", "weight": 2 }],
+      "hateFood": ["山珍", "咸", "力量涌现"]
+    },
+    {
+      "id": 5002,
+      "stringId": "Yorihime",
+      "name": "绵月依姬",
+      "fundRange": [1000, 1200],
+      "enduranceLimit": 1,
+      "likeFood": [{ "tagId": 4, "tag": "高级", "weight": 2 }, { "tagId": 14, "tag": "中华", "weight": 1 }, { "tagId": 28, "tag": "小巧", "weight": 2 }, { "tagId": 7, "tag": "清淡", "weight": 2 }, { "tagId": 5, "tag": "传说", "weight": 3 }, { "tagId": 22, "tag": "灼热", "weight": 1 }, { "tagId": 25, "tag": "文化底蕴", "weight": 2 }, { "tagId": 23, "tag": "力量涌现", "weight": 2 }],
+      "likeBev": [{ "tagId": 5, "tag": "烧酒", "weight": 1 }, { "tagId": 4, "tag": "可加热", "weight": 1 }, { "tagId": 19, "tag": "提神", "weight": 3 }, { "tagId": 14, "tag": "辛", "weight": 2 }, { "tagId": 11, "tag": "直饮", "weight": 2 }],
+      "hateFood": ["山珍", "菌类"]
+    },
+    {
+      "id": 5003,
+      "stringId": "Ellen",
+      "name": "爱莲",
+      "fundRange": [300, 500],
+      "enduranceLimit": 1,
+      "likeFood": [{ "tagId": 9, "tag": "饱腹", "weight": 1 }, { "tagId": 13, "tag": "西式", "weight": 2 }, { "tagId": 17, "tag": "甜", "weight": 2 }, { "tagId": 3, "tag": "家常", "weight": 1 }, { "tagId": 29, "tag": "梦幻", "weight": 2 }, { "tagId": 21, "tag": "凉爽", "weight": 1 }],
+      "likeBev": [{ "tagId": 17, "tag": "古典", "weight": 1 }, { "tagId": 0, "tag": "低酒精", "weight": 1 }, { "tagId": 4, "tag": "可加热", "weight": 1 }, { "tagId": 13, "tag": "甘", "weight": 2 }, { "tagId": 10, "tag": "啤酒", "weight": 2 }],
+      "hateFood": ["水产", "重油", "生"]
+    },
+    {
+      "id": 5004,
+      "stringId": "Mima",
+      "name": "魅魔",
+      "fundRange": [2000, 3000],
+      "enduranceLimit": 1,
+      "likeFood": [{ "tagId": 24, "tag": "猎奇", "weight": 1 }, { "tagId": 16, "tag": "鲜", "weight": 2 }, { "tagId": 10, "tag": "山珍", "weight": 2 }, { "tagId": 18, "tag": "生", "weight": 1 }, { "tagId": 1, "tag": "水产", "weight": 1 }, { "tagId": 26, "tag": "菌类", "weight": 1 }, { "tagId": 23, "tag": "力量涌现", "weight": 2 }],
+      "likeBev": [{ "tagId": 5, "tag": "烧酒", "weight": 2 }, { "tagId": 2, "tag": "高酒精", "weight": 2 }, { "tagId": 8, "tag": "西洋酒", "weight": 1 }, { "tagId": 3, "tag": "可加冰", "weight": 1 }, { "tagId": 14, "tag": "辛", "weight": 1 }],
+      "hateFood": ["高级", "清淡"]
+    },
+    {
+      "id": 5005,
+      "stringId": "Luize",
+      "name": "露易兹",
+      "fundRange": [800, 1000],
+      "enduranceLimit": 1,
+      "likeFood": [{ "tagId": 30, "tag": "特产", "weight": 1 }, { "tagId": 17, "tag": "甜", "weight": 2 }, { "tagId": 13, "tag": "西式", "weight": 2 }, { "tagId": 28, "tag": "小巧", "weight": 1 }, { "tagId": 1, "tag": "水产", "weight": 1 }, { "tagId": 20, "tag": "适合拍照", "weight": 3 }],
+      "likeBev": [{ "tagId": 7, "tag": "鸡尾酒", "weight": 2 }, { "tagId": 3, "tag": "可加冰", "weight": 2 }, { "tagId": 1, "tag": "中酒精", "weight": 1 }, { "tagId": 18, "tag": "现代", "weight": 1 }, { "tagId": 10, "tag": "啤酒", "weight": 1 }],
+      "hateFood": ["重油", "饱腹"]
+    },
+    {
+      "id": 5006,
+      "stringId": "Doremy",
+      "name": "哆来咪",
+      "fundRange": [0, 0],
+      "enduranceLimit": 0,
+      "likeFood": [],
+      "likeBev": [],
+      "hateFood": []
+    },
+    {
+      "id": 5007,
+      "stringId": "Sara",
+      "name": "萨拉",
+      "fundRange": [0, 0],
+      "enduranceLimit": 0,
+      "likeFood": [],
+      "likeBev": [],
+      "hateFood": []
+    },
+    {
+      "id": 5011,
+      "stringId": "Eirin",
+      "name": "八意永琳",
+      "fundRange": [0, 0],
+      "enduranceLimit": 0,
+      "likeFood": [],
+      "likeBev": [],
+      "hateFood": []
+    },
+    {
+      "id": 5010,
+      "stringId": "Sagume",
+      "name": "稀神探女",
+      "fundRange": [0, 0],
+      "enduranceLimit": 0,
+      "likeFood": [],
+      "likeBev": [],
+      "hateFood": []
+    },
+    {
+      "id": 5012,
+      "stringId": "DLC5_Yukari",
+      "name": "八云紫",
+      "fundRange": [4000, 6000],
+      "enduranceLimit": 1,
+      "likeFood": [{ "tagId": 4, "tag": "高级", "weight": 2 }, { "tagId": 3, "tag": "家常", "weight": 2 }, { "tagId": 5, "tag": "传说", "weight": 1 }, { "tagId": 32, "tag": "汤羹", "weight": 1 }, { "tagId": 24, "tag": "猎奇", "weight": 1 }, { "tagId": 21, "tag": "凉爽", "weight": 2 }, { "tagId": 20, "tag": "适合拍照", "weight": 2 }],
+      "likeBev": [{ "tagId": 5, "tag": "烧酒", "weight": 2 }, { "tagId": 1, "tag": "中酒精", "weight": 2 }, { "tagId": 2, "tag": "高酒精", "weight": 1 }, { "tagId": 17, "tag": "古典", "weight": 2 }],
+      "hateFood": ["饱腹", "菌类"]
+    },
+    {
+      "id": 5008,
+      "stringId": "Shikieiki",
+      "name": "四季映姬",
+      "fundRange": [0, 0],
+      "enduranceLimit": 0,
+      "likeFood": [],
+      "likeBev": [],
+      "hateFood": []
+    },
+    {
+      "id": 5013,
+      "stringId": "Mizuchi",
+      "name": "宫出口瑞灵",
+      "fundRange": [0, 0],
+      "enduranceLimit": 0,
+      "likeFood": [],
+      "likeBev": [],
+      "hateFood": []
+    },
+    {
+      "id": 5009,
+      "stringId": "Shinki",
+      "name": "神绮",
+      "fundRange": [0, 0],
+      "enduranceLimit": 0,
+      "likeFood": [],
+      "likeBev": [],
+      "hateFood": []
+    },
+    {
+      "id": 5014,
+      "stringId": "DLC5_Komachi",
+      "name": "小野塚小町",
+      "fundRange": [0, 0],
+      "enduranceLimit": 0,
+      "likeFood": [],
+      "likeBev": [],
+      "hateFood": []
+    },
+    {
+      "id": 5015,
+      "stringId": "Mike",
+      "name": "豪德寺三花",
+      "fundRange": [0, 0],
+      "enduranceLimit": 0,
+      "likeFood": [],
+      "likeBev": [],
+      "hateFood": []
+    }
+  ]
+}

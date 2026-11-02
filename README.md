@@ -547,3 +547,26 @@ score     = likeHits * 2                     // 只保留 >0
 - `SpecialGuestTracking.Record` 改成运行时标签优先：`var liveTags = GetOrReadLiveTags(...); var tags = liveTags ?? (known ? entry.Tags : null);`，酒水同理由 `liveTags != null ? null : entry.BeverageTags`。
 - `RecipeRecommender.ComputeWithCuratedTableCore` 的查表分支加 `GuestTagConfig.UseCuratedHints.Value`（默认 false），默认纯动态。
 - 未知稀客：`FormatRecommendationsRaw` 的 `!HasFoodPreference` 分支改成 `<color=#FFB86B>[新稀客] 数据未收录</color>`。
+
+## 附：稀客权重数据（v1.2.1 导出）
+
+插件启动后会自动把游戏里的全量稀客数据导出成 JSON，方便做表、写攻略、自己核对：
+
+- 路径：`BepInEx\config\cc.mystia.guesttag.specialguests.json`
+- 内容：每位稀客的 `id` / `stringId` / 本地化名 / 预算范围 `fundRange` / `enduranceLimit` / 喜欢的菜与水标签（带 `weight` 权重）/ 讨厌的菜标签
+- 数据直接来自游戏对象（`SpecialGuest` + `DataBaseCharacter.GetAllSpecialGuests()`），不是人工整理的
+- 示例（莉格露）：
+
+```json
+{
+  "id": 0,
+  "stringId": "Wriggle",
+  "name": "莉格露",
+  "fundRange": [200, 400],
+  "enduranceLimit": 1.4,
+  "likeFood": [{ "tagId": 17, "tag": "甜", "weight": 1 }, { "tagId": 24, "tag": "猎奇", "weight": 2 }],
+  "hateFood": ["素", "清淡", "凉爽"]
+}
+```
+
+本版本导出的一份完整数据也放进了压缩包（`specialguests.json`），可以直接拿去用。
