@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using GameData.Core.Collections;
 using NightScene.CookingUtility;
@@ -21,13 +21,14 @@ internal static class CookwareFilter
     private const string Tag = "[GuestTag]";
 
     /// <summary>扫描间隔：厨具是常驻对象，2 秒一次足够，别每帧 FindObjectsOfType。</summary>
-    private const float ScanIntervalSeconds = 2f;
+    private const float ScanIntervalSeconds = 30f;      // 30 秒扫一次就够（厨具是常驻对象，别拿 FindObjectsOfType 当轮询）
 
     private static readonly HashSet<Cooker.CookerType> Present = new();
     private static HashSet<Cooker.CookerType>? _overrideTypes;
     private static bool _overrideParsed;
     private static float _lastScanTime = -999f;
     private static bool _logged;
+    private static bool _rawLogged;  // 营业配置原始值是否已打印（m08354 诊断用）
 
     /// <summary>台上至少有一种厨具时才启用过滤；否则视为「读不到」，一律放行。</summary>
     internal static bool HasAnyCooker
@@ -50,12 +51,53 @@ internal static class CookwareFilter
         }
         catch (Exception ex)
         {
-            Plugin.Logger.LogDebug($"{Tag} 厨具判定失败（放行）：{ex.GetType().Name}: {ex.Message}");
+            Diag.DbgSb(() => $"{Tag} 厨具判定失败（放行）：{ex.GetType().Name}: {ex.Message}");
             return true;
         }
     }
 
-    /// <summary>给 UI/日志用的可读描述，例如「煮锅、烤架」。</summary>
+    /// <summary>
+    /// 这道菜要求的厨具，今晚厨房里有没有（m08215）。
+    /// 规则：
+    ///   - 菜谱没写厨具（空列表）→ 放行；
+    ///   - 台上一个厨具都没扫到（读不到）→ 放行，绝不因为读失败把整张菜单清空；
+    ///   - 只要菜要求的任意一种厨具在场 → 放行；
+    ///   - 一种都没有 → 拦截。
+    /// </summary>
+    internal static bool IsAnyAvailable(int[]? types)
+    {
+        try
+        {
+            if (types == null || types.Length == 0) return true; // 菜谱没写厨具：不拦
+            EnsureScanned();                                     // 确保扫过厨具
+            if (Present.Count == 0) return true;                 // 读不到：不拦
+
+            foreach (var id in types)                            // 逐个需要的厨具
+            {
+                if (id <= 0) continue;                           // Empty / 非法 id：跳过
+                if (Present.Contains((Cooker.CookerType)id)) return true; // 在场：这道菜能做
+            }
+
+            return false;                                        // 一种都不在场：拦
+        }
+        catch (Exception ex)
+        {
+            Diag.DbgSb(() => $"{Tag} 厨具判定失败（放行）：{ex.GetType().Name}: {ex.Message}");
+            return true;
+        }
+    }
+
+    /// <summary>台上是否至少有一种厨具（读得到厨具时过滤才生效）。</summary>
+    internal static bool FilterActive
+    {
+        get
+        {
+            EnsureScanned();
+            return Present.Count > 0;
+        }
+    }
+
+    /// <summary>给 UI/日志用的可读描述，例如「煮锅、烧烤架」。</summary>
     internal static string Describe()
     {
         EnsureScanned();
@@ -72,8 +114,10 @@ internal static class CookwareFilter
 
     private static void EnsureScanned()
     {
-        var now = Time.unscaledTime;
         if (_overrideParsed && _overrideTypes != null) return; // 玩家手填优先，不用再扫
+        if (!PhaseGate.IsNightWorkPhaseFast()) return;         // 白天（大地图）绝不扫描（m07921：FindObjectsOfType 很贵）
+
+        var now = Time.unscaledTime;
         if (now - _lastScanTime < ScanIntervalSeconds) return;
         _lastScanTime = now;
 
@@ -81,6 +125,16 @@ internal static class CookwareFilter
         {
             Present.Clear();
 
+            // 第一优先：今晚营业配置里的厨具（IzakayaConfigure.CookerConfigure）。
+            // 这是玩家「真的摆上台」的那几台，比场景里 FindObjectsOfType 更准
+            // （场景里可能还留着没带出来的厨具对象，用户 m08280 遇到的「只带 2 台却扫出 5 种」就是这个原因）。
+            if (TryScanFromConfigure())
+            {
+                FinishScan();
+                return;
+            }
+
+            // 第二优先：场景里活着的 CookController（营业配置读不到时的兜底）
             var controllers = UnityEngine.Object.FindObjectsOfType<CookController>();
             if (controllers != null)
             {
@@ -113,15 +167,83 @@ internal static class CookwareFilter
                 }
             }
 
-            if (!_logged)
-            {
-                _logged = true;
-                Plugin.Logger.LogInfo($"{Tag} 厨具：{Describe()}");
-            }
+            FinishScan();
         }
         catch (Exception ex)
         {
-            Plugin.Logger.LogDebug($"{Tag} 扫描厨具失败（本次不按厨具过滤）：{ex.GetType().Name}: {ex.Message}");
+            Diag.DbgSb(() => $"{Tag} 扫描厨具失败（本次不按厨具过滤）：{ex.GetType().Name}: {ex.Message}");
+        }
+    }
+
+    /// <summary>扫描收尾：只打一次「今晚有哪些厨具」的日志。</summary>
+    private static void FinishScan()
+    {
+        if (_logged) return;                                              // 只打一次
+        _logged = true;                                                    // 标记已打
+        Plugin.Logger.LogInfo($"{Tag} 今晚厨具：{Describe()}");             // 例如「今晚厨具：煮锅、烧烤架」
+    }
+
+    /// <summary>
+    /// 从营业配置读取今晚的厨具（m08280）。
+    /// 返回 true 表示读到了（已经写进 Present），false 表示读不到、让调用方退回场景扫描。
+    /// 值的含义：优先按 CookerType(1..5) 解释；不在 1..5 的，尝试 DataBaseCore.Cookers[id].Type 映射。
+    /// </summary>
+    private static bool TryScanFromConfigure()
+    {
+        try
+        {
+            var configure = GameData.RunTime.NightSceneUtility.IzakayaConfigure.Instance; // 营业配置单例
+            if (configure == null || configure.Pointer == IntPtr.Zero) return false;      // 还没进营业：读不到
+
+            var raw = configure.CookerConfigure;                                          // 今晚厨具（int[]）
+            if (raw == null || raw.Length == 0) return false;                             // 空：交给场景扫描
+
+            var rawText = new List<string>();                                             // 原始值，写日志用
+            var added = 0;                                                                // 成功识别的数量
+
+            foreach (var value in raw)                                                    // 逐个厨具
+            {
+                rawText.Add(value.ToString());                                            // 记录原值
+
+                if (value > 0 && value <= (int)Cooker.CookerType.CuttingBoard)            // 1..5 直接当 CookerType
+                {
+                    Present.Add((Cooker.CookerType)value);                                // 记下这台厨具
+                    added++;                                                              // 计数
+                    continue;                                                             // 下一个
+                }
+
+                // 大于 5：当作数据库 id，查 DataBaseCore.Cookers 拿到 Cooker 再取 Type
+                try
+                {
+                    var cookers = DataBaseCore.Cookers;                                   // 厨具数据库
+                    if (cookers != null && cookers.TryGetValue(value, out var cooker) && cooker != null)
+                    {
+                        var type = cooker.Type;                                           // 厨具种类
+                        if (type != Cooker.CookerType.Empty)                              // 有效种类
+                        {
+                            Present.Add(type);                                            // 记下这台厨具
+                            added++;                                                      // 计数
+                        }
+                    }
+                }
+                catch
+                {
+                    // 单台映射失败不影响其它厨具
+                }
+            }
+
+            if (!_rawLogged)                                              // 原始值只打一次
+            {
+                _rawLogged = true;                                        // 标记已打
+                Plugin.Logger.LogInfo($"{Tag} 厨具（营业配置原始值）: [{string.Join(",", rawText)}] → 识别为 {Describe()}"); // 关键诊断行
+            }
+
+            return added > 0;                                                             // 识别到至少一台才算成功
+        }
+        catch (Exception ex)
+        {
+            Diag.DbgSb(() => $"{Tag} 读营业配置厨具失败（退回场景扫描）：{ex.GetType().Name}: {ex.Message}");
+            return false;
         }
     }
 
@@ -159,7 +281,7 @@ internal static class CookwareFilter
         }
         catch (Exception ex)
         {
-            Plugin.Logger.LogDebug($"{Tag} 解析 [Cookware] Override 失败：{ex.Message}");
+            Diag.DbgSb(() => $"{Tag} 解析 [Cookware] Override 失败：{ex.Message}");
             return null;
         }
     }
@@ -181,7 +303,11 @@ internal static class CookwareFilter
         if (token.IndexOf('烤') >= 0) return Cooker.CookerType.Grill;
         if (token.IndexOf('油') >= 0 || token.IndexOf('炸') >= 0) return Cooker.CookerType.Fryer;
         if (token.IndexOf('蒸') >= 0) return Cooker.CookerType.Steamer;
-        if (token.IndexOf('砧') >= 0 || token.IndexOf('板') >= 0) return Cooker.CookerType.CuttingBoard;
+        // 「砧板」「案板」「料理台」「切××」都算料理台（CuttingBoard）
+        if (token.IndexOf('砧') >= 0 || token.IndexOf('板') >= 0 || token.IndexOf("料理") >= 0 || token.IndexOf('切') >= 0)
+        {
+            return Cooker.CookerType.CuttingBoard;
+        }
 
         if (Enum.TryParse<Cooker.CookerType>(token, true, out var parsed)) return parsed;
         return Cooker.CookerType.Empty;
@@ -192,10 +318,10 @@ internal static class CookwareFilter
         switch (type)
         {
             case Cooker.CookerType.Pot: return "煮锅";
-            case Cooker.CookerType.Grill: return "烤架";
+            case Cooker.CookerType.Grill: return "烧烤架";
             case Cooker.CookerType.Fryer: return "油锅";
-            case Cooker.CookerType.Steamer: return "蒸笼";
-            case Cooker.CookerType.CuttingBoard: return "砧板";
+            case Cooker.CookerType.Steamer: return "蒸锅";
+            case Cooker.CookerType.CuttingBoard: return "料理台";
             default: return "空";
         }
     }

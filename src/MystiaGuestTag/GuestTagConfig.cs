@@ -1,14 +1,6 @@
-using BepInEx.Configuration;
+﻿using BepInEx.Configuration;
 
 namespace MystiaGuestTag;
-
-/// <summary>推荐策略：价格高的优先 / 价格低的优先 / 需要的食材种类少的优先。</summary>
-internal enum RecommendStrategy
-{
-    PriceLow,
-    PriceHigh,
-    FewIngredients,
-}
 
 internal enum OverlayCorner
 {
@@ -54,8 +46,24 @@ internal static class GuestTagConfig
     /// <summary>玩家自定义价格覆盖（「菜名 = 价格」，分号分隔）。</summary>
     internal static ConfigEntry<string> CustomPrices = null!;
 
-    /// <summary>推荐策略（面板顶部策略按钮循环切换，改完立刻写回 cfg）。</summary>
-    internal static ConfigEntry<string> Strategy = null!;
+    /// <summary>是否在推荐菜后面显示「主料 + 加料建议」（v1.3.0 起走本地 JSON）。</summary>
+    internal static ConfigEntry<bool> ShowIngredients = null!;
+
+    /// <summary>推荐池来源：Auto = 已解锁菜谱优先，读不到退回今晚菜单；Tonight = 只用今晚菜单；All = 全菜谱。</summary>
+    internal static ConfigEntry<string> RecipePoolMode = null!;
+
+    /// <summary>总开关（m07921）：false 时插件完全不干活，用来做 A/B 排查。</summary>
+    internal static ConfigEntry<bool> Enabled = null!;
+
+    /// <summary>是否输出调试日志（m07921）：默认关。关掉时连字符串都不会拼接。</summary>
+    internal static ConfigEntry<bool> VerboseLog = null!;
+
+    /// <summary>是否只用背包食材做得出的菜（主料一样不缺）。</summary>
+    internal static ConfigEntry<bool> RequireIngredients = null!;
+
+    /// <summary>每位稀客显示几个「套餐」（一道菜 + 一杯酒），上限 3。</summary>
+
+    internal static ConfigEntry<int> MaxCombos = null!;
 
     private static ConfigFile? _file;
     internal static ConfigEntry<string> Layout = null!;
@@ -130,23 +138,51 @@ internal static class GuestTagConfig
                 "面板上最多同时显示几位稀客；超出的会折叠，标题里显示「已显示 x/y 位」。设 1 只显示最近一位，面板高度也会自动缩短",
                 new AcceptableValueRange<int>(1, 10)));
 
+        MaxCombos = config.Bind(
+            "Display",
+            "MaxCombos",
+            3,
+            new ConfigDescription(
+                "每位稀客显示几个套餐（一道菜 + 一杯酒）。游戏里稀客一般一道菜配一杯酒，所以上限只给到 3",
+                new AcceptableValueRange<int>(1, 3)));
+
+        ShowIngredients = config.Bind(
+            "Display",
+            "ShowIngredients",
+            true,
+            "推荐菜后面是否显示【主料: 鱼x1+肉x2】【加料: 肉·特产】。加料建议按稀客喜好标签 + 背包库存算，背包里没有的会标（缺 N 种）");
+
+        RecipePoolMode = config.Bind(
+            "UI",
+            "RecipePoolMode",
+            "Auto",
+            "推荐池来源：Auto（默认）= 只推游戏里已解锁的菜谱（读 RunTimeStorage.Recipes），读不到时退回今晚菜单；"
+            + "Tonight = 只在今晚菜单里挑；All = 全菜谱（不推荐，会推出没解锁的菜）");
+
+        RequireIngredients = config.Bind(
+            "UI",
+            "RequireIngredients",
+            true,
+            "是否只推主料齐全的菜：true 时按背包食材库存过滤，缺主料的菜不进推荐池；库存读不到时自动跳过这道过滤");
+
+        Enabled = config.Bind(
+            "General",
+            "Enabled",
+            true,
+            "总开关：关掉后插件不读稀客、不计算、不绘制（排查掉帧用）");
+
+        VerboseLog = config.Bind(
+            "Logging",
+            "VerboseLog",
+            false,
+            "是否输出调试日志：默认关。关掉时日志字符串根本不会被拼接，不会吃 CPU");
+
         CustomPrices = config.Bind(
             "Prices",
             "CustomPrices",
             string.Empty,
             "自定义价格覆盖：每项写成「菜名 = 价格」，多项用分号隔开，例如：冷豆腐 = 20; 二天一流 = 120。"
             + "这里填了的菜按这个价格显示，没填的仍然读游戏里的实际售价（TrueValue）。改完重开游戏生效。");
-
-        Strategy = config.Bind(
-            "Display",
-            "Strategy",
-            nameof(RecommendStrategy.PriceLow),
-            new ConfigDescription(
-                "推荐策略：PriceLow 低价优先（清库存）/ PriceHigh 高价优先（狠狠赚一笔）/ FewIngredients 少料易做（优先食材种类少的菜）；面板顶部的 [策略: …] 按钮可以循环切换",
-                new AcceptableValueList<string>(
-                    nameof(RecommendStrategy.PriceLow),
-                    nameof(RecommendStrategy.PriceHigh),
-                    nameof(RecommendStrategy.FewIngredients))));
 
         PositionX = config.Bind(
             "UI",
@@ -165,7 +201,7 @@ internal static class GuestTagConfig
             "Override",
             string.Empty,
             "手填今晚带的厨具（读不到游戏数据时的兜底）。写成「煮锅 = 2; 油锅 = 1」，"
-            + "数字只作备注，插件按「种类」过滤：煮锅(Pot) / 烤架(Grill) / 油锅(Fryer) / 蒸笼(Steamer) / 砧板(CuttingBoard)。"
+            + "数字只作备注，插件按「种类」过滤：煮锅(Pot) / 烧烤架(Grill) / 油锅(Fryer) / 蒸锅(Steamer) / 料理台(CuttingBoard)。"
             + "留空 = 不启用，完全读游戏里台上的厨具。改完重开游戏生效。");
 
         PositionY = config.Bind(
@@ -188,7 +224,7 @@ internal static class GuestTagConfig
             PositionY.Value = roundedY;
             _file?.Save();
 
-            Plugin.Logger.LogDebug($"{Plugin.PluginName} 面板位置已保存: ({roundedX}, {roundedY})");
+            Diag.DbgSb(() => $"{Plugin.PluginName} 面板位置已保存: ({roundedX}, {roundedY})");
         }
         catch (System.Exception ex)
         {
@@ -216,11 +252,17 @@ internal static class GuestTagConfig
     /// 游戏内设置面板保存时调用：先改内存里的值（下一帧 UI 立刻按新值排版），再写回 cfg 文件。
     /// 任何异常都不往外抛，最多丢一次落盘。
     /// </summary>
-    internal static void ApplyDisplaySettings(int maxGuests, int maxRecipes, int maxDrinks)
+    internal static void ApplyDisplaySettings(int maxGuests, int combos)
     {
-        MaxGuestsToDisplay.Value = System.Math.Clamp(maxGuests, 1, 10);
-        MaxRecipesPerGuest.Value = System.Math.Clamp(maxRecipes, 1, 10);
-        MaxDrinksPerGuest.Value = System.Math.Clamp(maxDrinks, 1, 10);
+        var clampedGuests = System.Math.Clamp(maxGuests, 1, 10);
+        var clampedCombos = System.Math.Clamp(combos, 1, 3);
+
+        MaxGuestsToDisplay.Value = clampedGuests;
+        MaxCombos.Value = clampedCombos;
+
+        // 老键继续同步：老版本的 cfg / 第三方工具还认这两个名字（v1.3.0 起它们只受「套餐」数控制）
+        MaxRecipesPerGuest.Value = clampedCombos;
+        MaxDrinksPerGuest.Value = clampedCombos;
 
         try
         {
@@ -232,53 +274,17 @@ internal static class GuestTagConfig
         }
     }
 
-    internal static int GetMaxRecipes() => System.Math.Clamp(MaxRecipesPerGuest.Value, 1, 10);
+    /// <summary>套餐数（1~3）：一道菜 + 一杯酒算一个套餐。</summary>
 
-    internal static int GetMaxDrinks() => System.Math.Clamp(MaxDrinksPerGuest.Value, 1, 10);
+    internal static int GetCombos() => System.Math.Clamp(MaxCombos.Value, 1, 3);
+
+    // 推荐器只关心「要几条」，套餐模式下菜品和酒水都按套餐数取
+    internal static int GetMaxRecipes() => GetCombos();
+
+    internal static int GetMaxDrinks() => GetCombos();
 
     internal static int GetMaxGuests() => System.Math.Clamp(MaxGuestsToDisplay.Value, 1, 10);
 
-    /// <summary>读当前策略；cfg 被手改坏了就退回低价优先。</summary>
-    internal static RecommendStrategy GetStrategy()
-    {
-        return (Strategy.Value ?? string.Empty).Trim().ToLowerInvariant() switch
-        {
-            "pricehigh" => RecommendStrategy.PriceHigh,
-            "fewingredients" => RecommendStrategy.FewIngredients,
-            _ => RecommendStrategy.PriceLow,
-        };
-    }
-
-    /// <summary>点一下策略按钮：低价优先 → 高价优先 → 少料易做 → 低价优先。</summary>
-    internal static RecommendStrategy NextStrategy(RecommendStrategy current) => current switch
-    {
-        RecommendStrategy.PriceLow => RecommendStrategy.PriceHigh,
-        RecommendStrategy.PriceHigh => RecommendStrategy.FewIngredients,
-        _ => RecommendStrategy.PriceLow,
-    };
-
-    internal static string StrategyDisplayName(RecommendStrategy strategy) => strategy switch
-    {
-        RecommendStrategy.PriceHigh => "高价优先",
-        RecommendStrategy.FewIngredients => "少料易做",
-        _ => "低价优先",
-    };
-
-    /// <summary>策略按钮落账：写内存 + 落盘，下一帧推荐就按新策略重排。</summary>
-    internal static RecommendStrategy ApplyStrategy(RecommendStrategy strategy)
-    {
-        Strategy.Value = strategy.ToString();
-        try
-        {
-            _file?.Save();
-        }
-        catch (System.Exception ex)
-        {
-            Plugin.Logger.LogWarning($"[GuestTag] 策略写回 cfg 失败（本次游戏内仍生效）: {ex.Message}");
-        }
-
-        return strategy;
-    }
 
     internal static bool UseTwoColumns()
     {

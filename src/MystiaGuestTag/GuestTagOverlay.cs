@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -16,7 +16,7 @@ namespace MystiaGuestTag;
 ///
 /// 排版（2026-11-01 第 3 次重做，按 5 稀客实测反馈）：
 /// - 默认停靠屏幕中左侧、竖向居中：碰不到右边 COMBO 区，也压不到底部金钱栏/按键提示；
-/// - 每位稀客最多 2 个推荐菜 + 1 杯推荐酒水（由 RecipeRecommender 限制），块高因此可控；
+/// - 每位稀客最多 2 个推荐菜 + 1 杯推荐酒水（由 SetMatchRecommender 限制），块高因此可控；
 /// - 人多了先缩字号（base → base-6），还放不下就把多余的淡客折叠成「…另有 N 位」；
 /// - 也可以把 UI.Layout 改成 TwoColumns 走两列并排；
 /// - 新的稀客排在上面（按最后出现时间倒序）。
@@ -35,6 +35,10 @@ internal static class GuestTagOverlay
     /// 键 = stringId + 行种类，值里存数组引用，SeenGuest 每 2 秒重建数组时才重算一次。
     /// </summary>
     private static readonly Dictionary<string, (string[] Arr, string Text)> LineCache =
+        new(StringComparer.Ordinal);
+
+    /// <summary>套餐行缓存：菜品数组 + 酒水数组任一换引用才重算（OnGUI 每帧只做字典查找）。</summary>
+    private static readonly Dictionary<string, (string[] Food, string[] Drinks, string[] Lines)> ComboCache =
         new(StringComparer.Ordinal);
 
     private static string CachedLine(string id, string kind, string[]? arr, Func<string[], string> build)
@@ -175,6 +179,8 @@ internal static class GuestTagOverlay
     private static string? _lastLayoutKey;
 
     /// <summary>上一次算出来的面板矩形：非 Repaint 事件用它做拖拽命中测试，不重复排版。</summary>
+
+
     private static Rect? _lastPanelRect;
 
     /// <summary>F10 隐藏整个面板（做菜时想清屏）。</summary>
@@ -193,49 +199,41 @@ internal static class GuestTagOverlay
     private static bool _hasLayout;
 
 
-    /// <summary>分页窗口的起始下标（滚轮翻页）。</summary>
+    /// <summary>分页窗口的起始下标（只由玩家的 ↑/↓ 决定，绝不自动翻页）。</summary>
     private static int _windowOffset;
 
     private static int _maxWindowOffset;
 
-    /// <summary>F9 设置面板 / F10 隐藏显示，都只在 Layout 事件里轮询（一帧一次）。</summary>
+    /// <summary>
+    /// 全局按键：F10 显隐、↑/↓ 手动翻页。
+    /// 只在 EventType.Layout 里跑（IMGUI 一帧只派发一次 Layout），所以不会被重复触发；
+    /// 这里没有任何“到点自动翻页”的代码——翻页只可能来自玩家按键 / 滚轮 / 点标题栏 ▲▼。
+    /// </summary>
     private static void HandleGlobalInput()
     {
-        try
+        try                                                            // 读按键失败也不能让绘制挂掉
         {
-            var currentEvent = Event.current;
-            if (currentEvent == null || currentEvent.type != EventType.Layout) return;
+            var currentEvent = Event.current;                          // 当前 IMGUI 事件
+            if (currentEvent == null || currentEvent.type != EventType.Layout) return; // 只在一帧一次的 Layout 里跑
 
-            if (Input.GetKeyDown(KeyCode.F10))
+            if (Input.GetKeyDown(KeyCode.F10))                          // F10：显示 / 隐藏面板
             {
-                _hidden = !_hidden;
-                _lastPanelRect = null;
-                Plugin.Logger.LogInfo(_hidden
-                    ? $"{HarmonyTag} 面板已隐藏（再按 F10 显示）"
-                    : $"{HarmonyTag} 面板已显示");
-            }
-        }
-        catch
+                _hidden = !_hidden;                                     // 取反
+                _lastPanelRect = null;                                  // 清掉上次矩形，隐藏时不做命中测试
+                Plugin.Logger.LogInfo(_hidden                          // 打日志：说明当前是隐藏还是显示
+                    ? $"{HarmonyTag} 面板已隐藏（再按 F10 显示）"        // 隐藏时的文案
+                    : $"{HarmonyTag} 面板已显示");                       // 显示时的文案
+            }                                                           // F10 分支结束
+
+            // m08067：键盘 ↑↓ 不再翻页（用户明确「上下键和点击按钮不用」）。
+            // 翻页的唯一入口 = 鼠标滚轮（HandleScrollWheel），见 Draw() 的非 Repaint 分支。
+        }                                                               // try 结束
+        catch                                                           // 任何异常（按键层被游戏吞之类）
         {
             // 按键检测失败不影响绘制
-        }
-    }
+        }                                                               // catch 结束
+    }                                                                   // HandleGlobalInput 结束
 
-    /// <summary>鼠标在面板上滚轮翻页：一格一位稀客。</summary>
-    private static void HandleWheel(Rect panel, Event? currentEvent)
-    {
-        if (currentEvent == null || currentEvent.type != EventType.ScrollWheel) return;
-        if (_maxWindowOffset <= 0) return;
-        if (!panel.Contains(currentEvent.mousePosition)) return;
-
-        // 一格滚轮 = 一位稀客；到底再滚回顶部、到顶再滚到底（循环）。
-        // 有的鼠标/触控板一次事件 delta.y 会给到 ±2 以上，这里只认方向、步长恒为 1，
-        // 所以无论滚得多猛，翻页速度都一样，不会「唰」一下滑过去。
-        var step = currentEvent.delta.y > 0f ? 1 : -1;
-        var span = _maxWindowOffset + 1;
-        _windowOffset = ((_windowOffset + step) % span + span) % span;
-        currentEvent.Use();
-    }
     private static Vector2? _panelPosition;
     private static bool _dragging;
     private static int _dragControlId;
@@ -281,67 +279,144 @@ internal static class GuestTagOverlay
         }
     }
 
-    private static void OnGUI_Postfix()
+    /// <summary>上一帧是否处于「营业中」。用来识别「白天 ↔ 夜晚」的切换，只在切换那一次做清理。</summary>
+    private static bool _wasNightActive;
+
+    /// <summary>
+    /// 这一晚是否已经做过「开局清场」（m08014）。
+    /// 进入夜晚营业的第一帧强制清一次：把上一晚残留、准备阶段误登记的数据全部扔掉，
+    /// 保证面板上出现的每一位稀客都来自「本晚订单列表」。
+    /// </summary>
+    private static bool _nightCleared;
+
+    /// <summary>
+    /// 进入白天的清理：把推荐缓存、套餐缓存、页码、滚动位置全部复位。
+    /// 只在「营业 → 白天」这**一次**切换时执行，所以可以放心做重活。
+    /// </summary>
+    private static void GoToSleep()
     {
-        HandleGlobalInput();
-
-        // 设置面板要独立于稀客面板：它得在 Layout/Repaint/鼠标事件里都能跑
-        SettingsPanel.HandleInput();
-
-        try
-        {
-            Draw();
-        }
-        catch (Exception ex)
-        {
-            if (!_drawFailureLogged)
-            {
-                _drawFailureLogged = true;
-                Plugin.Logger.LogError($"{HarmonyTag} 绘制面板异常（后续静默）: {ex}");
-            }
-        }
-
-        SettingsPanel.Draw();
+        SpecialGuestTracking.ClearAll();                                      // 清在场名单与自动翻页信号
+        SetMatchRecommender.ClearCache();                                     // 清推荐器缓存
+        ComboCache.Clear();                                                   // 清套餐缓存
+        _windowOffset = 0;                                                    // 页码回到第一页
+        _maxWindowOffset = 0;                                                 // 页码上限复位
+        _scroll = Vector2.zero;                                               // 滚动条回到顶部
+        _lastPanelRect = null;                                                // 忘掉面板矩形（白天不该再命中）
+        _drawFailureLogged = false;                                          // 让下次真出异常时还能报一次
+        Plugin.Logger.LogInfo($"{HarmonyTag} 已离开营业阶段：面板休眠，缓存清空");
     }
 
-    private static void Draw()
+    private static void OnGUI_Postfix()
     {
-        // IMGUI 一帧会进好几次 OnGUI（Layout/Repaint/各种鼠标事件），
-        // 只有 Repaint 才真正需要画东西；其它事件直接返回，省掉整帧的排版和 native 读取。
-        var currentEvent = Event.current;
-        var isRepaint = currentEvent == null || currentEvent.type == EventType.Repaint;
+        // ===== 第 -1 道：白天场景硬闸（m08103）=====
+        // 只读 Unity 的当前场景名（同帧缓存），白天大地图直接 return：
+        // 不读配置、不问相位、不碰任何 IL2CPP 对象、不画一个像素。
+        if (SceneGate.IsDayScene()) return;                                  // 白天：立刻走人
 
-        SpecialGuestTracking.RefreshPresentIfDue();
+        // ===== 第 0 道：总开关（m07921）=====
+        // 关掉后这里一行都不跑，用来做 A/B 排查到底是不是插件在吃 CPU。
+        if (!GuestTagConfig.Enabled.Value) return;                           // 总开关关掉：立刻走人
 
-        // 非 Repaint 事件（Layout / 各种鼠标事件）不重排版，但拖拽和光标必须照常处理，
-        // 否则鼠标一动面板就不跟手了。命中测试用上一次算好的矩形。
-        if (!isRepaint)
+        // 计时只取一次时间戳，零分配；日志由 Diag 自己做节流，不会刷屏。
+        var started = System.Diagnostics.Stopwatch.GetTimestamp();            // 进入时刻（tick）
+        try
         {
-            if (_lastPanelRect.HasValue)
+            // ===== 第 1 道：白天硬休眠（m07876 / m07921）=====
+            // 白天大地图跑图时，这里直接 return：不读稀客、不算推荐、不拼字符串、不排版、不画一个像素。
+            // 相位判定按帧节流（同帧复用、跨帧最多 15 帧问一次），连 IL2CPP 属性都不是每帧读。
+            if (!PhaseGate.IsNightWorkPhaseFast())
             {
-                var rect = _lastPanelRect.Value;
-                HandleStepperClick(rect, currentEvent);
-                HandleDrag(rect, ResolveTitleBar(rect));
-                HandleWheel(rect, currentEvent);
-
-                // 步进条必须在这条路径上也画一遍：GUI.Button 只有吃到 MouseDown/MouseUp 才会返回 true，
-                // 只在 Repaint 里画的话按钮永远是死键（2026-11-01「显示数量点不动」就是这个原因）。
-                if (_hasLayout)
+                if (_wasNightActive)                                         // 从营业切回白天：做一次清理
                 {
-                    DrawStepperBar(
-                        new Rect(rect.x + 2f, rect.y + TitleBarHeight, rect.width - 4f, StepperHeight),
-                        _lastLayout);
-                    DrawStrategyBar(
-                        new Rect(rect.x + 2f, rect.y + TitleBarHeight + StepperHeight, rect.width - 4f, StrategyHeight));
+                    _wasNightActive = false;                                 // 标记已休眠
+                    _nightCleared = false;                                   // 下一晚重新清场（m08014）
+                    GoToSleep();                                             // 清缓存 + 复位面板状态
+                }
+                return;                                                      // 白天：到此为止，零消耗
+            }
+
+            _wasNightActive = true;                                          // 记录：现在是营业中
+
+            // ===== 第 1.5 道：本晚第一次进入营业 → 强制清场（m08014）=====
+            if (!_nightCleared)                                              // 这一晚还没清过
+            {
+                _nightCleared = true;                                        // 标记已清
+                SpecialGuestTracking.ClearAll();                             // 扔掉上一晚/准备阶段的脏数据
+                SetMatchRecommender.ClearCache();                            // 推荐缓存一并清
+                ComboCache.Clear();                                          // 套餐缓存一并清
+                _windowOffset = 0;                                           // 页码归零
+                _lastPanelRect = null;                                       // 忘掉上一次的面板矩形
+                Diag.Dbg($"{HarmonyTag} 进入营业：面板已清场（m08014）");      // 调试日志（默认不输出）
+            }
+
+            HandleGlobalInput();                                             // 键盘（↑↓/F10）
+
+            // 设置面板要独立于稀客面板：它得在 Layout/Repaint/鼠标事件里都能跑
+            SettingsPanel.HandleInput();                                     // 设置面板的输入
+
+            try
+            {
+                Draw();                                                      // 真正排版绘制
+            }
+            catch (Exception ex)
+            {
+                if (!_drawFailureLogged)                                     // 只在第一次报
+                {
+                    _drawFailureLogged = true;                               // 记标志
+                    Plugin.Logger.LogError($"{HarmonyTag} 绘制面板异常（后续静默）: {ex}");
                 }
             }
 
-            return;
+            SettingsPanel.Draw();                                            // 设置面板绘制
         }
+        finally
+        {
+            Diag.NoteFrame(started);                                         // 只做几次减法，日志由 Diag 节流
+        }
+    }
+
+    /// <summary>
+    /// 面板绘制总入口。IMGUI 一帧会进多次 OnGUI（Layout / Repaint / 各种鼠标事件）：
+    /// 只有 Repaint 才真正排版画字；其它事件只处理输入（滚轮、点击、拖拽），然后立刻返回。
+    /// </summary>
+    private static void Draw()
+    {
+        // ===== 第二道：绘制入口也再确认一次（防御性，白天绝不排版）=====
+        if (!PhaseGate.IsNightWorkPhaseFast()) return;                  // 非营业：直接走人
+
+        var currentEvent = Event.current;                               // 当前 IMGUI 事件
+        var isRepaint = currentEvent == null || currentEvent.type == EventType.Repaint; // 是不是绘制帧
+
+        SpecialGuestTracking.RefreshPresentIfDue();                     // 1.5 秒一次的在场名单刷新（不动页码）
+
+        // ---------- 非 Repaint：只处理输入，不排版 ----------
+        if (!isRepaint)
+        {
+            if (_lastPanelRect.HasValue)                                // 还没画过面板就没有矩形可命中
+            {
+                var rect = _lastPanelRect.Value;                        // 用上一次算好的面板矩形
+                HandleScrollWheel(rect);                                // 鼠标在面板内滚轮 → 翻页并吃掉事件
+                HandleStepperClick(rect, currentEvent);                 // 标题栏 ▲▼ 与步进条加点
+                HandleDrag(rect, ResolveTitleBar(rect));                // 标题栏拖拽
+
+                if (_hasLayout)                                         // 有布局才画按钮：GUI.Button 必须吃到 MouseDown/MouseUp 才返回 true
+                {
+                    _cursorHole = CursorHole(rect);                     // 鼠标处的透明洞（让游戏光标透出来）
+                    DrawStepperBar(                                     // 步进条：必须在这条路径上也画一遍
+                        new Rect(rect.x + 2f, rect.y + TitleBarHeight, rect.width - 4f, StepperHeight), // 步进条矩形
+                        _lastLayout);                                   // 用上次的布局数据
+                    DrawStrategyBar(                                    // 规则说明条（只读文字）
+                        new Rect(rect.x + 2f, rect.y + TitleBarHeight + StepperHeight, rect.width - 4f, StrategyHeight));
+                }                                                       // 画按钮分支结束
+            }                                                           // 命中测试分支结束
+
+            return;                                                     // 非绘制帧到此为止
+        }                                                               // 非 Repaint 分支结束
 
         if (_hidden)
         {
             _lastPanelRect = null;
+            InputBlocker.MouseOverPanel = false;
             return;
         }
 
@@ -355,8 +430,8 @@ internal static class GuestTagOverlay
         var guests = SpecialGuestTracking.SnapshotVisible();
         if (guests.Count == 0)
         {
-            _lastPanelRect = null;
-            _windowOffset = 0;
+            _lastPanelRect = null;                                       // 忘掉矩形：空面板不该再吃鼠标
+            _windowOffset = Mathf.Clamp(_windowOffset, 0, Mathf.Max(0, _maxWindowOffset)); // m08050：只夹取，不归零
             return;
         }
 
@@ -376,6 +451,12 @@ internal static class GuestTagOverlay
         _totalGuests = total; // m03657：标题要报「场上总共几位」，不是被截断后的位数
         var window = Mathf.Min(limit, total);
         _maxWindowOffset = Mathf.Max(0, total - window);
+
+        // ── 页码只归玩家管（m08050）──
+        // 任何数据刷新、客人进店、客人离店、上菜，都**不准**修改下面的 _windowOffset。
+        // 唯一允许写入的地方只有三处：键盘 ↑↓（HandleGlobalInput）、鼠标滚轮（HandleScrollWheel）、
+        // 以及这里的「安全夹取」——把页码限制在 0..(总页数-1)，绝不强制归零。
+        // 唯一允许的「被动写入」：只做区间夹取（0 .. 总页数-1），永远不强制改成 0（m08050）。
         _windowOffset = _maxWindowOffset <= 0 ? 0 : Mathf.Clamp(_windowOffset, 0, _maxWindowOffset);
         if (window < total)
         {
@@ -411,7 +492,7 @@ internal static class GuestTagOverlay
                 if (layout != null && !_trimLogged)
                 {
                     _trimLogged = true;
-                    Plugin.Logger.LogDebug(
+                    Diag.Dbg(
                         $"{HarmonyTag} 同时在场稀客较多（{guests.Count}），面板只显示最近 {keep} 位，其余折叠成一行");
                 }
             }
@@ -509,7 +590,7 @@ internal static class GuestTagOverlay
         if (string.Equals(key, _lastLayoutKey, StringComparison.Ordinal)) return;
 
         _lastLayoutKey = key;
-        Plugin.Logger.LogDebug(
+        Diag.Dbg(
             $"{HarmonyTag} 版面：{layout.Title}｜面板高 {layout.Height:F0}｜内容高 {layout.ContentHeight:F0}｜" +
             $"可视高 {layout.ViewHeight:F0}｜滚动 {layout.NeedsScroll}｜字号 {layout.Styles.Line.fontSize}");
     }
@@ -526,8 +607,10 @@ internal static class GuestTagOverlay
         HandleDrag(panel, ResolveTitleBar(panel));
         panel = ResolvePanelRect(layout.Width, layout.Height);
 
-        ApplyGameCursor(panel);
 
+        var inputEvent = Event.current;
+
+        _cursorHole = CursorHole(panel);
         DrawPanelBackground(panel);
         DrawTitleBar(ResolveTitleBar(panel), layout);
         DrawStepperBar(
@@ -555,7 +638,6 @@ internal static class GuestTagOverlay
                 GUI.EndScrollView();
             }
 
-            DrawOwnCursor(panel);
             return;
         }
 
@@ -565,7 +647,6 @@ internal static class GuestTagOverlay
             DrawRows(layout.ColumnRows[c], layout, x, top, layout.ColumnWidth);
         }
 
-        DrawOwnCursor(panel);
     }
 
     private static void DrawRows(List<Row> rows, Layout layout, float x, float y, float width)
@@ -792,13 +873,40 @@ internal static class GuestTagOverlay
             AddRow(block, hateText, false, m.LineHeight, false, styles, innerWidth);
         }
 
-        // 策略化之后只有一行：按当前策略排好序、带售价，前缀跟着策略变
+        // 还没读到点单气泡：这一位此刻就是「刚坐下、还没点单」的稀客。
+        // 名字 / 喜好 / 厌恶 / 预算 上面已经画完了，这里只补一行提示，绝不把整个人从面板里抹掉。
+        if (!guest.OrderKnown)
+        {
+            // 同样是「没有点单气泡」，但含义不同：
+            //   Dining = 已经点过、正在吃 → 提示用餐中，不再让他占着「等点单」的位置；
+            //   否则 = 刚坐下还没点 → 提示等待点单，点单一到下一帧就补推荐。
+            var waitingText = guest.Dining
+                ? "<color=#BFAF8E>[用餐中...]</color>"
+                : "<color=#BFAF8E>[等待稀客点单...]</color>";
+            AddRow(block, waitingText, false, m.LineHeight, false, styles, innerWidth);
+            return block;                                                       // 推荐区先空着
+        }
+
+        // 推荐行完全由 SetMatchRecommender 的结果驱动：
+        //   有菜品结果且点单已出 → 拼成「菜 + 酒」套餐行；
+        //   其余情况（等待点单 / 无匹配 / 未收录 / 数据缺失）→ 直接照抄推荐器给的文本。
+        var combos = FormatCombos(guest);
+        if (combos.Length > 0)
+        {
+            foreach (var combo in combos)
+            {
+                AddRow(block, combo, false, m.LineHeight, false, styles, innerWidth);
+            }
+
+            return block;
+        }
+
         AddRow(block, FormatRecommendations(guest), false, m.LineHeight, false, styles, innerWidth);
 
-        // 没有匹配的酒水就干脆不占这一行（省高度，也不显示「无匹配」占位）
-        if (guest.BeverageRecommendations.Length > 0)
+        var beverageText = FormatBeverages(guest);
+        if (beverageText.Length > 0)
         {
-            AddRow(block, FormatBeverages(guest), false, m.LineHeight, false, styles, innerWidth);
+            AddRow(block, beverageText, false, m.LineHeight, false, styles, innerWidth);
         }
 
         return block;
@@ -835,9 +943,12 @@ internal static class GuestTagOverlay
             new Color(0.78f, 0.62f, 0.30f, 0.85f));
 
         GUI.Label(
-            new Rect(bar.x + layout.Padding, bar.y, bar.width - layout.Padding * 2f, bar.height),
+            new Rect(bar.x + layout.Padding, bar.y, Mathf.Max(60f, bar.width - layout.Padding * 2f), bar.height),
             layout.Title,
             layout.Styles.Title);
+
+        // 翻页只剩鼠标滚轮一条路（用户 m07656 要求）：标题栏不再放 ▲▼，
+        // 步进条的「+ / −」只负责调「显示人数 / 菜品数 / 酒水数」，不再兼职翻页。
     }
 
     /// <summary>
@@ -856,11 +967,10 @@ internal static class GuestTagOverlay
         var groups = new (string Id, string Label, int Value)[]
         {
             ("guests", "显示", GuestTagConfig.GetMaxGuests()),
-            ("food", "菜品", GuestTagConfig.GetMaxRecipes()),
-            ("bev", "酒水", GuestTagConfig.GetMaxDrinks()),
+            ("combos", "套餐", GuestTagConfig.GetCombos()),
         };
 
-        StepperGeometry(bar.width, out var labelWidth, out var btn, out var valueWidth, out var gap, out var cellWidth);
+        StepperGeometry(bar.width, groups.Length, out var labelWidth, out var btn, out var valueWidth, out var gap, out var cellWidth);
 
         for (var i = 0; i < groups.Length; i++)
         {
@@ -883,24 +993,20 @@ internal static class GuestTagOverlay
         }
     }
 
-    /// <summary>策略条：[策略: 低价优先] —— 整行可点，循环切换三种策略。</summary>
+    /// <summary>规则说明条：只读，解释现行的推荐规则（v1.4.0 起推荐顺序固定，不再有策略开关）。</summary>
     private static void DrawStrategyBar(Rect bar)
     {
         if (!_hasLayout) return;
         EnsureStepperStyles(_lastLayout);
 
-        var hovered = bar.Contains(Event.current?.mousePosition ?? new Vector2(-1f, -1f));
-        DrawLine(bar, hovered
-            ? new Color(0.40f, 0.28f, 0.15f, 0.98f)
-            : new Color(0.26f, 0.18f, 0.11f, 0.96f));
+        DrawLine(bar, new Color(0.26f, 0.18f, 0.11f, 0.96f));
         DrawLine(
             new Rect(bar.x, bar.yMax - 1f, bar.width, 1f),
-            new Color(0.72f, 0.57f, 0.28f, hovered ? 0.95f : 0.55f));
+            new Color(0.72f, 0.57f, 0.28f, 0.55f));
 
         if (_stepLabelStyle == null) return;
 
-        var strategy = GuestTagConfig.GetStrategy();
-        var text = $"策略: {GuestTagConfig.StrategyDisplayName(strategy)}　▸ 点击切换";
+        const string text = "规则: 先剔除厌恶 → 喜好命中数 → 低价优先";
         GUI.Label(new Rect(bar.x + 8f, bar.y, bar.width - 16f, bar.height), text, _stepLabelStyle);
     }
 
@@ -985,34 +1091,79 @@ internal static class GuestTagOverlay
     private static float _pendingStepperTime = -999f;
     private static float _lastAppliedTime = -999f;
 
+    /// <summary>
+    /// 鼠标滚轮翻页——严格按“取鼠标坐标 → 判断在不在面板里 → 判断是不是滚轮 → 改页码 → Use() 吃掉”写。
+    /// 只在鼠标位于面板矩形内时生效；只要在面板内，无论能不能翻页都会 Use()，
+    /// 防止滚轮事件穿透到游戏底层导致镜头缩放。
+    /// </summary>
+    private static void HandleScrollWheel(Rect panel)
+    {
+        var e = Event.current;                                          // 取当前 IMGUI 事件
+        if (e == null || e.type != EventType.ScrollWheel) return;       // 不是滚轮事件：什么都不做
+
+        var mousePos = e.mousePosition;                                 // 鼠标在屏幕上的 X/Y 坐标
+        if (!panel.Contains(mousePos)) return;                          // 鼠标不在面板矩形内：不拦、不翻
+
+        if (_hidden) return;                                            // 面板被 F10 隐藏：不处理
+
+        if (_maxWindowOffset > 0)                                       // 只有存在第二页时才谈得上翻页
+        {
+            if (e.delta.y > 0f)                                         // 向下滚：下一页
+            {
+                _windowOffset = _windowOffset >= _maxWindowOffset ? 0 : _windowOffset + 1; // 到底绕回第一页
+            }                                                           // 向下滚分支结束
+            else                                                        // 向上滚：上一页
+            {
+                _windowOffset = _windowOffset <= 0 ? _maxWindowOffset : _windowOffset - 1; // 到顶绕到最后一页
+            }                                                           // 向上滚分支结束
+
+            ComboCache.Clear();                                         // 页码变了：套餐缓存全部作废
+            LogWheelOnce(e.delta.y);                                    // 打一行节流日志，便于核对
+        }                                                               // 翻页分支结束
+
+        e.Use();                                                        // 吃掉滚轮事件：绝不透传给游戏
+    }                                                                   // HandleScrollWheel 结束
+
+    private static float _lastWheelLogTime = -999f;                     // 上次滚轮日志时间（只用于日志节流）
+
+    /// <summary>滚轮日志节流：最多 1 秒一条，避免滚动时刷屏。</summary>
+    private static void LogWheelOnce(float delta)                       // 入参是滚轮方向值
+    {
+        if (Time.unscaledTime - _lastWheelLogTime < 1f) return;         // 1 秒内重复：不记
+        _lastWheelLogTime = Time.unscaledTime;                          // 记下本次时间
+        Diag.DbgSb(() => $"[GuestTag] 滚轮翻页：delta.y={delta:F1} → 第 {_windowOffset + 1} 页（共 {_maxWindowOffset + 1} 页）"); // 记录方向与页码
+    }                                                                   // LogWheelOnce 结束
+
+    /// <summary>
+    /// 面板上的鼠标交互：标题栏 ▲▼ 翻页 + 步进条（显示人数 / 每人套餐数）的加减。
+    /// 这里没有计时器驱动的翻页；_pendingStepperTime 只用于判断“按下到松开是不是同一次点击”。
+    /// </summary>
     private static void HandleStepperClick(Rect panel, Event e)
     {
-        var bar = new Rect(panel.x + 2f, panel.y + TitleBarHeight, panel.width - 4f, StepperHeight);
-        var inStrategy = ResolveStrategyRect(panel).Contains(e.mousePosition);
-        if (!bar.Contains(e.mousePosition) && !inStrategy && _pendingStepper == null) return;
+        var bar = new Rect(panel.x + 2f, panel.y + TitleBarHeight, panel.width - 4f, StepperHeight); // 步进条矩形
+        if (!bar.Contains(e.mousePosition) && _pendingStepper == null) return; // 鼠标不在步进条上且没有待落账的点击：不处理
 
-        switch (e.type)
+        switch (e.type)                                                 // 按事件类型分派
         {
-            case EventType.MouseDown when e.button == 0:
-                _pendingStepper = HitStepper(bar, e.mousePosition, ResolveStrategyRect(panel));
-                _pendingStepperTime = UnityEngine.Time.unscaledTime;
-                break;
+            case EventType.MouseDown when e.button == 0:                // 左键按下：只记录“想点哪个”
+                _pendingStepper = HitStepper(bar, e.mousePosition, Rect.zero); // 命中测试得到 guests+ / combos- 之类
+                _pendingStepperTime = UnityEngine.Time.unscaledTime;    // 记下按下时刻（用来判断长按）
+                break;                                                  // 退出 switch
 
-            case EventType.MouseUp when e.button == 0:
-                var id = _pendingStepper;
-                _pendingStepper = null;
-                if (id == null) return;
+            case EventType.MouseUp when e.button == 0:                  // 左键松开：才真正落账
+                var id = _pendingStepper;                               // 取出按下时记录的按钮
+                _pendingStepper = null;                                 // 立刻清空，防止重复落账
+                if (id == null) return;                                 // 本来就没按在按钮上：结束
 
-                // 按下到松开太久（>0.6 秒）或者松手时已经不在原按钮上，就当取消
-                if (UnityEngine.Time.unscaledTime - _pendingStepperTime > 0.6f) return;
-                if (HitStepper(bar, e.mousePosition, ResolveStrategyRect(panel)) != id) return;
+                if (UnityEngine.Time.unscaledTime - _pendingStepperTime > 0.6f) return; // 按住超过 0.6 秒：视为取消
+                if (HitStepper(bar, e.mousePosition, Rect.zero) != id) return;          // 松手时已经不在原按钮上：取消
 
-                ApplyStepper(id);
-                break;
-        }
-    }
+                ApplyStepper(id);                                       // 落账：改配置并写 cfg
+                break;                                                  // 退出 switch
+        }                                                               // switch 结束
+    }                                                                   // HandleStepperClick 结束
 
-    private static readonly string[] StepperIds = { "guests", "food", "bev" };
+    private static readonly string[] StepperIds = { "guests", "combos" };
 
     /// <summary>
     /// 步进条几何：三格平分，格内 [标签][−][数值][+]。
@@ -1021,6 +1172,7 @@ internal static class GuestTagOverlay
     /// </summary>
     private static void StepperGeometry(
         float barWidth,
+        int cellCount,
         out float labelWidth,
         out float btn,
         out float valueWidth,
@@ -1031,7 +1183,7 @@ internal static class GuestTagOverlay
         valueWidth = 22f;
         btn = 18f;
         labelWidth = 30f;
-        cellWidth = (barWidth - 8f) / 3f;
+        cellWidth = (barWidth - 8f) / Mathf.Max(1, cellCount);
 
         var needed = labelWidth + btn + gap + valueWidth + gap + btn;
         if (needed <= cellWidth - 2f) return;
@@ -1046,7 +1198,7 @@ internal static class GuestTagOverlay
     {
         if (strategyBar.Contains(mouse)) return "strategy";
 
-        StepperGeometry(bar.width, out var labelWidth, out var btn, out var valueWidth, out var gap, out var cellWidth);
+        StepperGeometry(bar.width, StepperIds.Length, out var labelWidth, out var btn, out var valueWidth, out var gap, out var cellWidth);
 
         for (var i = 0; i < StepperIds.Length; i++)
         {
@@ -1071,35 +1223,24 @@ internal static class GuestTagOverlay
         _lastAppliedTime = UnityEngine.Time.unscaledTime;
 
         var guests = GuestTagConfig.GetMaxGuests();
-        var food = GuestTagConfig.GetMaxRecipes();
-        var drinks = GuestTagConfig.GetMaxDrinks();
-
-        if (id == "strategy")
-        {
-            var next = GuestTagConfig.ApplyStrategy(GuestTagConfig.NextStrategy(GuestTagConfig.GetStrategy()));
-            RecipeRecommender.ClearCache();
-            Plugin.Logger.LogInfo(
-                $"[GuestTag] 推荐策略已切换为「{GuestTagConfig.StrategyDisplayName(next)}」（写入 cfg），推荐会立即按新策略重排");
-            return;
-        }
+        var combos = GuestTagConfig.GetCombos();
 
         switch (id)
         {
             case "guests-": guests = Mathf.Max(1, guests - 1); break;
             case "guests+": guests = Mathf.Min(10, guests + 1); break;
-            case "food-": food = Mathf.Max(1, food - 1); break;
-            case "food+": food = Mathf.Min(10, food + 1); break;
-            case "bev-": drinks = Mathf.Max(1, drinks - 1); break;
-            case "bev+": drinks = Mathf.Min(10, drinks + 1); break;
+            case "combos-": combos = Mathf.Max(1, combos - 1); break;
+            case "combos+": combos = Mathf.Min(3, combos + 1); break;
             default: return;
         }
 
-        GuestTagConfig.ApplyDisplaySettings(guests, food, drinks);
-        RecipeRecommender.ClearCache();
-        _windowOffset = 0; // 人数变了，翻页窗口重头开始，免得停在空页
+        GuestTagConfig.ApplyDisplaySettings(guests, combos);
+        SetMatchRecommender.ClearCache();
+        // m08050：人数变了也只夹取，绝不把玩家正看着的那一页切走
+        _windowOffset = _maxWindowOffset <= 0 ? 0 : Mathf.Clamp(_windowOffset, 0, _maxWindowOffset);
 
         Plugin.Logger.LogInfo(
-            $"[GuestTag] 面板设置已更新（写入 cfg）：显示 {guests} 位 / 每人菜品 {food} 条 / 每人酒水 {drinks} 条");
+            $"[GuestTag] 面板设置已更新（写入 cfg）：显示 {guests} 位 / 每人 {combos} 个套餐");
     }
 
     /// <summary>
@@ -1192,52 +1333,6 @@ internal static class GuestTagOverlay
     /// 这里在鼠标压到面板上时，把硬件光标按游戏原本的状态压回去，并清掉任何 Cursor.SetCursor 贴图，
     /// 这样露出来的就是游戏自己画的那只光标。鼠标离开面板不做任何修改，交还给游戏。
     /// </summary>
-    private static void ApplyGameCursor(Rect panel)
-    {
-        var current = Event.current;
-        if (current == null) return;
-
-        if (!panel.Contains(current.mousePosition)) return;
-
-        // 第一次在面板上看到光标时记下游戏的状态（营业中通常是 false）
-        CaptureCursorState();
-
-        if (_cursorVisibleBefore) return; // 游戏本来就显示系统光标，别管
-
-        if (Cursor.visible)
-        {
-            Cursor.visible = false;
-        }
-
-        if (!_cursorTextureCleared)
-        {
-            _cursorTextureCleared = true;
-            try
-            {
-                Cursor.SetCursor(null, Vector2.zero, CursorMode.Auto);
-            }
-            catch
-            {
-                // 清不掉就算了，不影响功能
-            }
-        }
-    }
-
-    /// <summary>
-    /// 面板自己画一个光标点：游戏营业时会把系统光标藏起来、自己画像素光标，
-    /// 万一底层的光标没画出来，至少玩家还能看见鼠标在哪（暗边 + 白点 + 暖色芯）。
-    /// </summary>
-    private static void DrawOwnCursor(Rect panel)
-    {
-        var current = Event.current;
-        if (current == null || !panel.Contains(current.mousePosition)) return;
-
-        var p = current.mousePosition;
-        DrawLine(new Rect(p.x - 3f, p.y - 3f, 7f, 7f), new Color(0f, 0f, 0f, 0.65f));
-        DrawLine(new Rect(p.x - 2f, p.y - 2f, 5f, 5f), new Color(1f, 1f, 1f, 0.9f));
-        DrawLine(new Rect(p.x - 1f, p.y - 1f, 3f, 3f), new Color(0.95f, 0.85f, 0.55f, 1f));
-    }
-
     private static Vector2 ClampPosition(Vector2 position, Vector2 size) =>
         new(
             Mathf.Clamp(position.x, 0f, Mathf.Max(0f, Screen.width - size.x)),
@@ -1248,27 +1343,125 @@ internal static class GuestTagOverlay
     {
         var previousColor = GUI.color;
         GUI.color = color;
-        GUI.DrawTexture(rect, Texture2D.whiteTexture);
+
+        var hole = _cursorHole;
+        if (hole.width > 0f && rect.Overlaps(hole))
+        {
+            FillAroundCurrentColor(rect, hole);
+        }
+        else
+        {
+            GUI.DrawTexture(rect, Texture2D.whiteTexture);
+        }
+
         GUI.color = previousColor;
     }
 
+    /// <summary>按当前 GUI.color 填充 rect，但跳过 hole（挖成透明，露出游戏光标）。</summary>
+    private static void FillAroundCurrentColor(Rect area, Rect hole)
+    {
+        var top = Mathf.Max(0f, hole.y - area.y);
+        if (top > 0f) GUI.DrawTexture(new Rect(area.x, area.y, area.width, top), Texture2D.whiteTexture);
+
+        var bottomY = Mathf.Min(area.yMax, hole.yMax);
+        var bottom = area.yMax - bottomY;
+        if (bottom > 0f) GUI.DrawTexture(new Rect(area.x, bottomY, area.width, bottom), Texture2D.whiteTexture);
+
+        var bandY = Mathf.Max(area.y, hole.y);
+        var bandH = Mathf.Min(area.yMax, hole.yMax) - bandY;
+        if (bandH <= 0f) return;
+
+        var leftW = Mathf.Max(0f, hole.x - area.x);
+        if (leftW > 0f) GUI.DrawTexture(new Rect(area.x, bandY, leftW, bandH), Texture2D.whiteTexture);
+
+        var rightX = Mathf.Min(area.xMax, hole.xMax);
+        var rightW = area.xMax - rightX;
+        if (rightW > 0f) GUI.DrawTexture(new Rect(rightX, bandY, rightW, bandH), Texture2D.whiteTexture);
+    }
+
     /// <summary>暖色木质底板：深棕半透明 + 一圈米金色细边（照着游戏里的食堂菜单配色）。</summary>
+    /// <summary>面板底板上「给鼠标让路」的洞：IMGUI 画在游戏画面之上，不挖洞的话
+    /// 游戏自己画的像素光标会被面板完全盖住（m05819）。</summary>
+    private const float CursorHoleSize = 16f;
+
+    /// <summary>本帧鼠标处的透明洞（16x16）：所有实心填充都绕开它，游戏自己的光标才透得出来。</summary>
+    private static Rect _cursorHole;
+
+    // 页按钮已删除（用户 m07656：只留滚轮翻页）
+
+    private static Rect CursorHole(Rect panel)
+    {
+        var current = Event.current;
+        if (current == null) return Rect.zero;
+        if (!panel.Contains(current.mousePosition)) return Rect.zero;
+
+        var p = current.mousePosition;
+        var half = CursorHoleSize * 0.5f;
+        return new Rect(p.x - half, p.y - half, CursorHoleSize, CursorHoleSize);
+    }
+
+    /// <summary>把 area 填色，但跳过 hole（挖成透明，让游戏本体的光标透出来）。</summary>
+    private static void FillAround(Rect area, Color color, Rect hole)
+    {
+        if (hole.width <= 0f || !area.Overlaps(hole))
+        {
+            GUI.color = color;
+            GUI.DrawTexture(area, Texture2D.whiteTexture);
+            return;
+        }
+
+        GUI.color = color;
+
+        var top = Mathf.Max(0f, hole.y - area.y);
+        if (top > 0f)
+        {
+            GUI.DrawTexture(new Rect(area.x, area.y, area.width, top), Texture2D.whiteTexture);
+        }
+
+        var bottomY = Mathf.Min(area.yMax, hole.yMax);
+        var bottom = area.yMax - bottomY;
+        if (bottom > 0f)
+        {
+            GUI.DrawTexture(new Rect(area.x, bottomY, area.width, bottom), Texture2D.whiteTexture);
+        }
+
+        var bandY = Mathf.Max(area.y, hole.y);
+        var bandH = Mathf.Min(area.yMax, hole.yMax) - bandY;
+        if (bandH > 0f)
+        {
+            var leftW = Mathf.Max(0f, hole.x - area.x);
+            if (leftW > 0f)
+            {
+                GUI.DrawTexture(new Rect(area.x, bandY, leftW, bandH), Texture2D.whiteTexture);
+            }
+
+            var rightX = Mathf.Min(area.xMax, hole.xMax);
+            var rightW = area.xMax - rightX;
+            if (rightW > 0f)
+            {
+                GUI.DrawTexture(new Rect(rightX, bandY, rightW, bandH), Texture2D.whiteTexture);
+            }
+        }
+    }
+
     private static void DrawPanelBackground(Rect panel)
     {
         // BackgroundAlpha 以 0.7 为基准，映射到用户给的 RGBA(60,40,30,200)
         var alpha = Mathf.Clamp01(GuestTagConfig.BackgroundAlpha.Value / 0.7f * (200f / 255f));
         const float border = 2f;
+        var hole = CursorHole(panel);
 
         var previousColor = GUI.color;
         try
         {
-            GUI.color = new Color(0.87f, 0.77f, 0.52f, Mathf.Clamp01(alpha + 0.12f)); // 米金外框
-            GUI.DrawTexture(panel, Texture2D.whiteTexture);
+            // 米金外框
+            FillAround(panel, new Color(0.87f, 0.77f, 0.52f, Mathf.Clamp01(alpha + 0.12f)), hole);
 
-            GUI.color = new Color(60f / 255f, 40f / 255f, 30f / 255f, alpha); // 暖棕底
-            GUI.DrawTexture(
+            // 暖棕底（内缩 2px），同样给鼠标挖洞
+            FillAround(
                 new Rect(panel.x + border, panel.y + border, panel.width - border * 2f, panel.height - border * 2f),
-                Texture2D.whiteTexture);
+                new Color(60f / 255f, 40f / 255f, 30f / 255f, alpha),
+                hole);
         }
         finally
         {
@@ -1310,31 +1503,113 @@ internal static class GuestTagOverlay
         return "<color=#FF9E9E>厌恶　" + Escape(joined) + "</color>";
     }
 
-    /// <summary>推荐菜品：按当前策略排好序的一行，前缀跟着策略变（低价优先 / 高价优先 / 少料易做）。</summary>
-    private static string FormatRecommendationsRaw(SpecialGuestTracking.SeenGuest guest)
+    /// <summary>
+    /// 套餐行：把 SetMatchRecommender 给出的「第 i 道菜 + 第 i 杯酒」原样摆在一行，
+    /// 格式 `[推荐套餐 1] 豆腐味噌 (¥21) + 梅酒 (¥32)`。
+    /// 这里不挑菜、不换菜、不补位——上游给什么就显示什么。
+    /// 结果按「菜品数组 + 酒水数组」的引用缓存，OnGUI 每帧只做字典查找。
+    /// </summary>
+    private static string[] FormatCombos(SpecialGuestTracking.SeenGuest guest)
     {
-        if (!guest.HasFoodPreference)
+        // 套餐只是把推荐器已经给出的「第 i 道菜 + 第 i 杯酒」摆在一行，
+        // 不做任何额外筛选/补位。等待点单或没有菜品结果时返回空，交给上面两行直接显示状态文本。
+        if (!guest.OrderKnown) return Array.Empty<string>();
+
+        var food = guest.Recommendations;
+        var drinks = guest.BeverageRecommendations;
+
+        var statusLabel = (guest.FoodLabel ?? string.Empty) + (guest.BeverageLabel ?? string.Empty);
+        if (food.Length == 0 ||
+            statusLabel.Contains("等待") ||
+            statusLabel.Contains("无匹配") ||
+            statusLabel.Contains("未收录") ||
+            statusLabel.Contains("数据"))
         {
-            // m03688：新 DLC 的稀客如果连运行时标签都读不到，明确告诉玩家「数据未收录」，不要静默摆烂
-            return "<color=#FFB86B>[新稀客] 数据未收录</color>";
+            return Array.Empty<string>();
         }
 
-        if (guest.Recommendations.Length == 0)
+        // 缓存键带上预算与结果标签：预算变了、点单要求变了、结果状态变了都要重算，
+        // 否则会出现「钱包变了但面板还显示上一单推荐」的串号。
+        var key = guest.StringId + "|c" + GuestTagConfig.GetCombos() +
+                  "|" + food.Length + "|" + drinks.Length +
+                  "|b" + guest.Budget + "|r" + guest.RequestFoodTag + "." + guest.RequestBeverageTag +
+                  "|f" + (guest.FoodLabel ?? string.Empty) + "|v" + (guest.BeverageLabel ?? string.Empty);
+        if (ComboCache.TryGetValue(key, out var cached) &&
+            ReferenceEquals(cached.Food, food) && ReferenceEquals(cached.Drinks, drinks))
         {
-            return "<color=#BFAF8E>[推荐菜品] 无匹配</color>";
+            return cached.Lines;
         }
 
-        var label = string.IsNullOrEmpty(guest.FoodLabel) ? "推荐菜品" : guest.FoodLabel;
-        return "<color=#9BE86B>[" + Escape(label) + "] " +
-               Escape(string.Join("、", guest.Recommendations)) + "</color>";
+        string[] lines;
+
+        {
+            var count = Mathf.Min(food.Length, Mathf.Max(1, GuestTagConfig.GetCombos()));
+            lines = new string[count];
+            for (var i = 0; i < count; i++)
+            {
+                var dish = food[i];
+                var drink = i < drinks.Length && !string.IsNullOrEmpty(drinks[i]) ? drinks[i] : null;
+                var body = drink == null ? dish : dish + " + " + drink;
+                lines[i] = "<color=#9BE86B>[推荐套餐 " + (i + 1) + "]</color> " + Escape(body);
+            }
+        }
+
+        ComboCache[key] = (food, drinks, lines);
+        return lines;
     }
 
-    /// <summary>推荐酒水：同样按策略排序，没有匹配时整行不画。</summary>
+    /// <summary>推荐菜品：按 SetMatchRecommender 给出的顺序原样显示，前缀用推荐器给的标签。</summary>
+    /// <summary>
+    /// 推荐菜品这一行：文本 100% 来自 SetMatchRecommender.Recommend 的结果，
+    /// UI 只负责加方括号前缀和上色，不再自己判断「有没有数据 / 要不要兜底」。
+    /// 状态色：等待点单 → 米灰；无匹配 / 未收录 / 数据缺失 → 暗灰；正常命中 → 草绿。
+    /// </summary>
+    private static string FormatRecommendationsRaw(SpecialGuestTracking.SeenGuest guest)
+    {
+        var items = guest.Recommendations;
+        var label = string.IsNullOrEmpty(guest.FoodLabel) ? "推荐菜品" : guest.FoodLabel;
+
+        if (items.Length == 0)
+        {
+            // 推荐器说「没有」就是没有，UI 不补任何菜名。
+            var emptyText = guest.HasFoodPreference ? "无匹配" : "无明显偏好";
+            return "<color=#BFAF8E>[推荐菜品] " + emptyText + "</color>";
+        }
+
+        var color = RecommendLabelColor(label);
+        return color + "[" + Escape(label) + "] " + Escape(string.Join("、", items)) + "</color>";
+    }
+
+    /// <summary>按推荐器给出的标签决定这一行的颜色（只是配色，不含任何推荐判断）。</summary>
+    private static string RecommendLabelColor(string label)
+    {
+        if (string.IsNullOrEmpty(label)) return "<color=#9BE86B>";
+        if (label.Contains("等待")) return "<color=#BFAF8E>";
+        if (label.Contains("无匹配") || label.Contains("未收录") || label.Contains("数据")) return "<color=#BFAF8E>";
+        if (label.Contains("兜底")) return "<color=#E8C26B>";
+        return "<color=#9BE86B>";
+    }
+
+    /// <summary>推荐酒水：同上，没有匹配或处于等待点单状态时整行不画。</summary>
+    /// <summary>
+    /// 推荐酒水这一行：同样只渲染 SetMatchRecommender 的结果。
+    /// 「等待点单」时返回空串——等待提示由菜品行统一显示一次，避免上下两行重复同一句话。
+    /// </summary>
     private static string FormatBeveragesRaw(SpecialGuestTracking.SeenGuest guest)
     {
+        var items = guest.BeverageRecommendations;
         var label = string.IsNullOrEmpty(guest.BeverageLabel) ? "推荐酒水" : guest.BeverageLabel;
+
+        if (!string.IsNullOrEmpty(label) && label.Contains("等待")) return string.Empty;
+
+        if (items.Length == 0)
+        {
+            var emptyText = guest.HasBeveragePreference ? "无匹配" : "无明显偏好";
+            return "<color=#BFAF8E>[推荐酒水] " + emptyText + "</color>";
+        }
+
         return "<color=#7EC8E3>[" + Escape(label) + "] " +
-               Escape(string.Join("、", guest.BeverageRecommendations)) + "</color>";
+               Escape(string.Join("、", items)) + "</color>";
     }
 
 
@@ -1450,7 +1725,7 @@ internal static class GuestTagOverlay
             _font = Font.CreateDynamicFontFromOSFont(candidates, size);
             if (_font != null)
             {
-                Plugin.Logger.LogDebug($"{HarmonyTag} 面板字体已加载: {_font.name}");
+                Diag.DbgSb(() => $"{HarmonyTag} 面板字体已加载: {_font.name}");
             }
             else
             {

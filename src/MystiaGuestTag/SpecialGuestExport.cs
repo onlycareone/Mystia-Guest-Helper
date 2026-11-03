@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -75,7 +75,7 @@ internal static class SpecialGuestExport
         }
         catch (Exception ex)
         {
-            Plugin.Logger.LogDebug($"{HarmonyTag} 挂载导出点 {type.Name}.{methodName}() 失败（已忽略）：{ex.GetType().Name}: {ex.Message}");
+            Diag.DbgSb(() => $"{HarmonyTag} 挂载导出点 {type.Name}.{methodName}() 失败（已忽略）：{ex.GetType().Name}: {ex.Message}");
         }
     }
 
@@ -85,12 +85,19 @@ internal static class SpecialGuestExport
     }
 
     /// <summary>导出一次（幂等）。数据还没加载好时返回 false，调用方可以下次再试。</summary>
+    private static double _lastTryTime = -999.0;   // 上次尝试导出的时间（unscaledTime）
+    private const double RetryCooldown = 20.0;     // 失败后 20 秒内不再重试（m08103：白天别反复分配）
+
     internal static bool TryExportOnce()
     {
         if (_done)
         {
-            return true;
+            return true;                                        // 导出过：零成本直接返回
         }
+
+        var now = UnityEngine.Time.unscaledTime;                // 当前时间（秒）
+        if (now - _lastTryTime < RetryCooldown) return false;   // m08103：冷却期内直接放弃，不再扫一遍全体稀客
+        _lastTryTime = now;                                     // 记下本次尝试时间
 
         try
         {
@@ -101,7 +108,7 @@ internal static class SpecialGuestExport
             }
             catch (Exception ex)
             {
-                Plugin.Logger.LogDebug($"{HarmonyTag} 稀客数据尚未就绪：{ex.GetType().Name}");
+                Diag.DbgSb(() => $"{HarmonyTag} 稀客数据尚未就绪：{ex.GetType().Name}");
                 return false;
             }
 
@@ -118,7 +125,7 @@ internal static class SpecialGuestExport
                     }
                     catch (Exception initEx)
                     {
-                        Plugin.Logger.LogDebug($"{HarmonyTag} 主动初始化稀客数据失败（已忽略）：{initEx.GetType().Name}: {initEx.Message}");
+                        Diag.DbgSb(() => $"{HarmonyTag} 主动初始化稀客数据失败（已忽略）：{initEx.GetType().Name}: {initEx.Message}");
                     }
 
                     try
@@ -127,7 +134,7 @@ internal static class SpecialGuestExport
                     }
                     catch (Exception retryEx)
                     {
-                        Plugin.Logger.LogDebug($"{HarmonyTag} 初始化后重读稀客数据失败（已忽略）：{retryEx.GetType().Name}");
+                        Diag.DbgSb(() => $"{HarmonyTag} 初始化后重读稀客数据失败（已忽略）：{retryEx.GetType().Name}");
                         return false;
                     }
                 }

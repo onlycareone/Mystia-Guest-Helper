@@ -1,7 +1,8 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using GameData.Core.Collections.CharacterUtility;
 using GameData.Core.Collections.NightSceneUtility;
 using HarmonyLib;
 using NightScene.GuestManagementUtility;
@@ -27,22 +28,39 @@ internal static class SpecialGuestTracking
 {
     private const string HarmonyTag = "[GuestTag]";
 
+    /// <summary>被过滤掉的路人数量（仅日志用）。</summary>
+    private static int _nonSpecialSkipped;
+
+    /// <summary>稀客映射表探测失败是否已记录过日志。</summary>
+    private static bool _specialGuestProbeFailureLogged;
+
     /// <summary>厌恶标签最多取几个（防御：标签太多会把面板撑长）。</summary>
     private const int MaxHateTags = 8;
 
     /// <summary>一条已识别稀客的展示数据。</summary>
     internal sealed class SeenGuest
     {
+        /// <summary>
+        /// 是否「已确认入座并进入订单列表」。只有 RefreshPresent() 看到 IsOrdering == true 才会置真；
+        /// 生成钩子（SpawnSpecialGuestGroup）只登记、不置真 —— 这样准备阶段刚刷出来的稀客不会凭空上板（m08014）。
+        /// </summary>
+        public bool Seated { get; set; }
+
         public SeenGuest(
             string stringId,
             int id,
             string displayName,
             string[]? tags,
             string[] hateTags,
-            RecipeRecommender.RecommendationResult food,
-            RecipeRecommender.RecommendationResult beverage,
+            SetMatchRecommender.RecommendationResult food,
+            SetMatchRecommender.RecommendationResult beverage,
             int budget,
-            DateTime? firstSeenUtc = null)
+            int requestFoodTag,
+            int requestBeverageTag,
+            bool orderKnown,
+            DateTime? firstSeenUtc = null,
+            bool hasOrdered = false,
+            bool dining = false)
         {
             StringId = stringId;
             Id = id;
@@ -56,6 +74,11 @@ internal static class SpecialGuestTracking
             BeverageLabel = beverage.Label;
             HasBeveragePreference = beverage.HasPreference;
             Budget = budget;
+            RequestFoodTag = requestFoodTag;
+            RequestBeverageTag = requestBeverageTag;
+            OrderKnown = orderKnown;
+            HasOrdered = hasOrdered;
+            Dining = dining;
             FirstSeenUtc = firstSeenUtc ?? DateTime.UtcNow;
             LastSeenUtc = FirstSeenUtc;
         }
@@ -91,6 +114,27 @@ internal static class SpecialGuestTracking
         /// <summary>这一顿能掏出来的钱（GuestGroupController.MaxFundCarry）；0 = 没读到，按不限预算处理。</summary>
         public int Budget { get; }
 
+        /// <summary>这一单点单气泡里的特殊要求标签 id（0 = 没要求）。面板随每次点单换口味靠它。</summary>
+        public int RequestFoodTag { get; }
+
+        /// <summary>m06184：点单气泡是否已经弹出（此刻还亮着）。</summary>
+        public bool OrderKnown { get; }
+
+        /// <summary>
+        /// 这位客人这一顿是不是已经点过单了（点过就一直为真，气泡消失也不回退）。
+        /// 用来区分「刚坐下还没点」和「已经点完、正在吃饭」——两者 OrderKnown 都是 false，但含义完全不同。
+        /// </summary>
+        public bool HasOrdered { get; }
+
+        /// <summary>
+        /// 正在用餐：点过单了，而且点单气泡已经消失。
+        /// 面板靠它决定「该不该把这位挪到后面」「自动翻页时跳过他」。
+        /// </summary>
+        public bool Dining { get; }
+
+        /// <summary>这一单要求的酒水标签 id（0 = 没要求）。</summary>
+        public int RequestBeverageTag { get; }
+
         /// <summary>第一次被看到的时间：面板按它升序排，先来的稀客在上面（不会被新客挤走）。</summary>
         public DateTime FirstSeenUtc { get; }
 
@@ -124,7 +168,7 @@ internal static class SpecialGuestTracking
 
             foreach (var candidate in candidates)
             {
-                Plugin.Logger.LogDebug($"{HarmonyTag} SpawnSpecialGuestGroup 候选: {Describe(candidate)}");
+                Diag.DbgSb(() => $"{HarmonyTag} SpawnSpecialGuestGroup 候选: {Describe(candidate)}");
             }
 
             var target = candidates.FirstOrDefault();
@@ -167,11 +211,67 @@ internal static class SpecialGuestTracking
             // IL2CPP 对象可能是已回收包装，判 Pointer 更安全
             if (__result.Pointer == IntPtr.Zero) return;
 
-            Record(__result);
+            // m08014：这里**不**登记进 Seen。准备阶段 SpawnSpecialGuestGroup 就会返回稀客对象，
+            // 但那时他还没入座、没点单；以前在这里 Record 就会凭空弹出一个「等待稀客点单」的幽灵。
+            Diag.DbgSb(() => $"{HarmonyTag} 稀客生成钩子触发（仅观察，不登记）：{SafeString(() => __result.SpecialGuest.stringId)}");
         }
         catch (Exception ex)
         {
             Plugin.Logger.LogWarning($"{HarmonyTag} 读取稀客生成结果失败: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// 这个角色 id 到底是不是「稀客」——直接问游戏的映射表 DataBaseCharacter.IsSpecialGuestMapped(id)。
+    /// 这张表就是游戏自己用来生成日间稀客 / 夜间点单客的同一张表，比维护名字白名单可靠得多；
+    /// 普通妖怪（路人）在表里是 false，于是它们在采集阶段就被挡掉：不登记、不算菜、不算预算、不进面板。
+    /// 调用失败（IL2CPP 尚未初始化 / DLC 数据没加载完）时保守返回 true——宁可多算一位，也不漏掉稀客。
+    /// </summary>
+    private static bool IsSpecialGuestId(int id, SpecialGuest? guest = null)
+    {
+        if (id <= 0) return false;                                                  // id 非法：直接判定不是稀客
+
+        // 证据一：游戏自己的映射表（日间稀客用它生成，最权威）
+        try
+        {
+            if (DataBaseCharacter.IsSpecialGuestMapped(id)) return true;             // 表里明确是稀客
+        }
+        catch (Exception ex)
+        {
+            if (!_specialGuestProbeFailureLogged)                                   // 只记一次，避免刷屏
+            {
+                _specialGuestProbeFailureLogged = true;                             // 标记已记录
+                Diag.DbgSb(() => $"{HarmonyTag} 稀客映射表读取失败（后续按其它证据判断）: {ex.Message}");
+            }
+        }
+
+        // 证据二：本地稀客表（69 位）。映射表只覆盖日间稀客，夜间点单客要靠它兜住——
+        //         之前只信映射表，结果把坐到 1 号桌的莉格露当路人挡掉，整个面板直接空了。
+        if (JsonDataStore.HasGuestId(id)) return true;                              // 本地表里有他
+
+        // 证据三：他自带喜好标签就一定是稀客（普通妖怪没有喜好数据）。
+        try
+        {
+            if (guest != null && guest.Pointer != IntPtr.Zero && guest.LikeFoodTag is { Length: > 0 })
+            {
+                return true;                                                        // 有喜好 → 稀有客人
+            }
+        }
+        catch
+        {
+            // 读不到标签就当普通客人处理，交给下一帧再看
+        }
+
+        return false;                                                               // 三条证据都不成立
+    }
+
+    /// <summary>被挡住的路人计数（只用于日志，证明「零消耗」这条真的在跑）。</summary>
+    private static void CountNonSpecialSkip()
+    {
+        _nonSpecialSkipped++;                                                       // 累加
+        if (_nonSpecialSkipped == 1)                                                // 第一次挡掉时打一条
+        {
+            Diag.DbgSb(() => $"{HarmonyTag} 已开始过滤普通妖怪：它们不会进入面板，也不参与任何推荐计算");
         }
     }
 
@@ -185,6 +285,14 @@ internal static class SpecialGuestTracking
             if (guest == null || guest.Pointer == IntPtr.Zero) return null;
 
             var id = SafeInt(() => guest.Id);
+
+            // 非稀客（普通妖怪）直接不留痕：不进 Seen、不算菜、不算预算、不进面板。
+            if (!IsSpecialGuestId(id, guest))
+            {
+                CountNonSpecialSkip();                                              // 只记个数
+                return null;                                                        // 采集阶段就结束
+            }
+
             var rawStringId = SanitizeName(SafeString(() => guest.stringId));
 
             // 读不到 stringId 时用 "#id" 当键：以前空串会让多个未识别稀客挤在同一个键上互相覆盖
@@ -214,29 +322,65 @@ internal static class SpecialGuestTracking
 
             // 推荐菜品：按喜好标签给当晚菜单（读不到就全菜谱表）打分，再按预算过滤。
             // 失败/没匹配时是 NoMatch，面板显示「无匹配」，不影响稀客识别。
-            var food = RecipeRecommender.Recommend(guest, stringId ?? string.Empty, budget);
+            // m05162：点单气泡里的特殊要求（如「汤羹」「甜」）——含这个标签的菜/酒顶到最前
+            var (requestFoodTag, requestBevTag, orderKnown) = ReadPendingRequestTags(controller);
 
-            // 推荐酒水：喜好标签优先读 SpecialGuest.LikeBevTag，读不到用硬编码表里那份（按人设推的）。
-            // 两者都没有 = NoPreference，面板显示「无明显偏好」。
-            // m05033：把「推荐出来的菜」的标签传给酒水，做「甜口菜配甜口酒」的口味配对。
-            var pairingTags = RecipeRecommender.ReadDishTagNames(
-                RecipeRecommender.ExtractItemNames(food.Items));
-            var beverage = RecipeRecommender.RecommendBeverages(
+            // 推荐：纯集合比对（SetMatchRecommender）。
+            // 先按厌恶标签过滤，再按点单要求过滤，再按预算过滤，最后按喜好命中数排序；
+            // 整个过程不出现任何加权 / 加减分 / 相似度，也不为凑数补厌恶菜。
+            SetMatchRecommender.Recommend(
                 guest,
                 stringId ?? string.Empty,
-                null,
+                displayName,
                 budget,
-                pairingTags);
+                requestFoodTag,
+                orderKnown,
+                requestBevTag,
+                out var food,
+                out var beverage);
 
             // 同一个稀客每次进店都会被重新 Record：# 保留他第一次出现的时间，
             // 这样面板排序稳定（先来的在上），不会每帧抖。
             DateTime? firstSeen = null;
+            var alreadyOrdered = false;                                         // 之前有没有点过单
+            var wasDining = false;                                              // 之前是不是已经在吃了
             lock (Gate)
             {
                 if (Seen.TryGetValue(stringId ?? string.Empty, out var previous))
                 {
                     firstSeen = previous.FirstSeenUtc;
+                    alreadyOrdered = previous.HasOrdered;                       // 继承「点过单」这个事实
+                    wasDining = previous.Dining;                                // 继承「在用餐」这个事实
                 }
+            }
+
+            // 「点过单」是一次性的：只要这一顿点过一次，气泡消失后也要记得他点过了，
+            // 否则会退化成「刚坐下还没点」——面板会一直显示等待点单，还会被自动翻页当成待服务对象。
+            var hasOrdered = orderKnown || alreadyOrdered;
+            var dining = hasOrdered && !orderKnown;                             // 点完了、气泡没了 = 正在用餐
+
+            // m08050 / m08067：这里不再产生「自动翻页」信号。
+            // 上菜、进店、离店都只影响名单，页码完全由玩家的鼠标滚轮控制。
+            Diag.DbgSb(() => $"{HarmonyTag} 稀客 [{stringId}] 点单状态：已下单={hasOrdered}，用餐中={dining}");
+            // m05959：点单变化时打一行日志，方便确认「每点一次菜，口味要求就重新算」
+            int previousFoodRequest = 0;
+            int previousBevRequest = 0;
+            var hadPrevious = false;
+            lock (Gate)
+            {
+                if (Seen.TryGetValue(stringId ?? string.Empty, out var previousSeen))
+                {
+                    previousFoodRequest = previousSeen.RequestFoodTag;
+                    previousBevRequest = previousSeen.RequestBeverageTag;
+                    hadPrevious = true;
+                }
+            }
+
+            if (hadPrevious && (previousFoodRequest != requestFoodTag || previousBevRequest != requestBevTag))
+            {
+                Diag.Dbg(
+                    $"{HarmonyTag} 稀客 [{stringId}] 点单变化：菜要求 {previousFoodRequest} → {requestFoodTag}，" +
+                    $"酒要求 {previousBevRequest} → {requestBevTag}（推荐会按新要求重算）");
             }
 
             var seen = new SeenGuest(
@@ -248,7 +392,12 @@ internal static class SpecialGuestTracking
                 food,
                 beverage,
                 budget,
-                firstSeen);
+                requestFoodTag,
+                requestBevTag,
+                orderKnown,
+                firstSeen,
+                hasOrdered,
+                dining);
 
             lock (Gate)
             {
@@ -293,7 +442,7 @@ internal static class SpecialGuestTracking
 
         if (tags is { Length: > 0 })
         {
-            Plugin.Logger.LogDebug(
+            Diag.Dbg(
                 $"{HarmonyTag} 从运行时读到稀客 \"{key}\" 的喜好标签：{string.Join(" / ", tags)}");
         }
 
@@ -353,6 +502,41 @@ internal static class SpecialGuestTracking
     /// 读稀客的厌恶标签：SpecialGuest.HateFoodTagOriginal（Il2CppStructArray&lt;int&gt;）→ GetFoodTag 短名。
     /// 读不到就返回空数组（面板不画「厌恶」行），任何异常都不影响稀客识别本身。
     /// </summary>
+    /// <summary>
+    /// 读客人当前这张单的特殊要求标签（m05162）。
+    /// 数据源：GuestGroupController.AllOrdersData（Il2CppSystem Stack&lt;OrderBase&gt;）→ Peek()，
+    /// 若这一单是 SpecialOrder，取它的 RequestFoodTag / RequestBeverageTag（都是 int 标签 id）。
+    /// 普通单（NormalOrder）是「指定某道菜」，不走这个分支，返回 (0, 0)。
+    /// </summary>
+    private static (int Food, int Beverage, bool HasOrder) ReadPendingRequestTags(GuestGroupController? controller)
+    {
+        if (controller == null || controller.Pointer == IntPtr.Zero) return (0, 0, false);
+
+        try
+        {
+            var stack = controller.AllOrdersData;
+            if (stack == null || stack.Count == 0) return (0, 0, false);
+
+            var order = stack.Peek();
+            if (order == null || order.Pointer == IntPtr.Zero) return (0, 0, false);
+
+            // 只要栈顶是特殊订单，就算「点单已经出现」，哪怕他没提口味要求
+            var special = order.TryCast<GuestsManager.SpecialOrder>();
+            if (special == null) return (0, 0, false);
+
+            var foodTag = special.RequestFoodTag;
+            var bevTag = special.RequestBeverageTag;
+            if (foodTag < 0) foodTag = 0;
+            if (bevTag < 0) bevTag = 0;
+            return (foodTag, bevTag, true);
+        }
+        catch (Exception ex)
+        {
+            Diag.DbgSb(() => $"{HarmonyTag} 读点单要求失败（本次不做优先）：{ex.GetType().Name}: {ex.Message}");
+            return (0, 0, false);
+        }
+    }
+
     private static string[] ReadHateTags(SpecialGuest guest)
     {
         try
@@ -398,7 +582,7 @@ internal static class SpecialGuestTracking
             if (!HateLogged.Add(stringId)) return;
         }
 
-        Plugin.Logger.LogDebug($"{HarmonyTag} 稀客 [{stringId}] 的厌恶标签：{string.Join(" / ", hateTags)}");
+        Diag.DbgSb(() => $"{HarmonyTag} 稀客 [{stringId}] 的厌恶标签：{string.Join(" / ", hateTags)}");
     }
 
     private static void ReportUnknown(string? stringId, int id, string? fallbackName)    {
@@ -414,6 +598,16 @@ internal static class SpecialGuestTracking
     }
 
     /// <summary>取当前应显示的稀客（调用方负责处理锁内拷贝）。</summary>
+    /// <summary>把某位稀客标记为「已确认在等单」（由 RefreshPresent 在 IsOrdering 为真时调用）。</summary>
+    internal static void MarkSeated(string stringId)                                     // 入参：内部键
+    {
+        if (string.IsNullOrEmpty(stringId)) return;                                      // 空键忽略
+        lock (Gate)                                                                      // 与 Record 共用锁
+        {
+            if (Seen.TryGetValue(stringId, out var seen)) seen.Seated = true;            // 置真
+        }
+    }
+
     internal static List<SeenGuest> SnapshotVisible()
     {
         var now = DateTime.UtcNow;
@@ -426,6 +620,7 @@ internal static class SpecialGuestTracking
             }
 
             return Seen.Values
+                .Where(g => g.Seated)                                                    // m08014：没确认在等单的一律不上板
                 .OrderBy(g => g.FirstSeenUtc)
                 .ThenBy(g => g.DisplayName, StringComparer.Ordinal)
                 .ToList();
@@ -438,6 +633,47 @@ internal static class SpecialGuestTracking
     /// 而不是时间窗——否则稀客走了面板还会挂着他 90 秒（2026-11-01 实测的 bug）。
     /// 刚进店 2 秒内的先留着，避免生成 Hook 已登记、名单还没刷新的空档把他闪掉。
     /// </summary>
+    private static string _lastPresentLog = string.Empty;
+
+    /// <summary>m06052：把「这一轮场上到底有几位、分别是谁」只在变化时打一行，排查只显示一位。</summary>
+    private static void LogPresentOnce()
+    {
+        try
+        {
+            string line;
+            int count;
+            lock (Gate)
+            {
+                count = Seen.Count;
+                line = string.Join(", ", Seen.Values
+                    .OrderBy(g => g.FirstSeenUtc)
+                    .Select(g => g.DisplayName + "(" + g.StringId + ")"));
+            }
+
+            var text = "场上 " + count + " 位：" + line;
+            if (string.Equals(text, _lastPresentLog, StringComparison.Ordinal)) return;
+
+            _lastPresentLog = text;
+            Diag.DbgSb(() => $"{HarmonyTag} {text}（面板显示上限 {GuestTagConfig.GetMaxGuests()} 位）");
+        }
+        catch
+        {
+        }
+    }
+
+    /// <summary>
+    /// 营业结束 / 回到白天时调用：把在场名单、自动翻页信号全部清空。
+    /// 不清的话，第二天开门会拿昨天的旧数据先画一帧（甚至沿用昨天的页码）。
+    /// </summary>
+    internal static void ClearAll()
+    {
+        lock (Gate)                                                          // 与 RefreshPresent 共用同一把锁
+        {
+            Seen.Clear();                                                    // 清空在场名单
+            _lastPresentLog = string.Empty;                                  // 让下一天的「场上 N 位」日志能重新打
+        }
+    }
+
     private static void PruneAbsent(HashSet<string> alive)
     {
         var now = DateTime.UtcNow;
@@ -459,12 +695,16 @@ internal static class SpecialGuestTracking
 
         foreach (var key in gone)
         {
-            Plugin.Logger.LogDebug($"{HarmonyTag} 稀客已离店，移出面板：{key}");
+            Diag.DbgSb(() => $"{HarmonyTag} 稀客已离店，移出面板：{key}");
         }
     }
 
-    /// <summary>刚进店的宽限期：这段时间内即使没出现在在场名单里也先留着。</summary>
-    private static readonly TimeSpan PresentGrace = TimeSpan.FromSeconds(2);
+    /// <summary>
+    /// 刚进店的宽限期：这段时间内即使没出现在 GuetsManager 的在场名单里也先留着。
+    /// 稀客是「先走进来、坐下之后才进 AllPresentedGuestGroupController」，2 秒会让刚进店的人被踢掉、
+    /// 面板憋到点单时才出现（玩家反馈的「抢不到单」根因），所以放宽到 30 秒。
+    /// </summary>
+    private static readonly TimeSpan PresentGrace = TimeSpan.FromSeconds(30);
 
     /// <summary>标记一次「仍然在场」，延长显示时间。</summary>
     internal static void Touch(string stringId)
@@ -479,20 +719,24 @@ internal static class SpecialGuestTracking
     }
 
     /// <summary>两次「在场名单」扫描的最小间隔（秒）。OnGUI 每帧会被调好几次，不节流就是白白扫内存。</summary>
-    private const float RefreshIntervalSeconds = 2f; // m03065：2 秒一次，绝不每帧遍历游戏数据
+    private const float RefreshIntervalSeconds = 1.5f; // 既不每帧遍历，又能在客人进店的 1.5 秒内上屏
 
     private static float _lastRefreshTime = -999f;
 
     /// <summary>
-    /// 节流版刷新：默认 0.5 秒最多扫一次。进入/离开营业场景立刻会重扫（阶段变了）。
+    /// 节流版刷新：默认 1.5 秒最多扫一次。进入/离开营业场景立刻会重扫（阶段变了）。
+    /// </summary>
+    /// <summary>
+    /// 刷新节流：每 1.5 秒最多刷新一次「在场稀客」。
+    /// 注意：这里只刷新名单，绝不碰 _windowOffset（页码由玩家自己控制），所以不会出现“幽灵翻页”。
     /// </summary>
     internal static void RefreshPresentIfDue()
     {
-        var now = UnityEngine.Time.unscaledTime;
-        if (now - _lastRefreshTime < RefreshIntervalSeconds) return;
+        var now = UnityEngine.Time.unscaledTime;                            // 当前游戏时间（不受暂停影响）
+        if (now - _lastRefreshTime < RefreshIntervalSeconds) return;        // 距上次不足 1.5 秒：直接返回，不做任何事
 
-        _lastRefreshTime = now;
-        RefreshPresent();
+        _lastRefreshTime = now;                                             // 记下本次刷新时间
+        RefreshPresent();                                                   // 真正去读 GuestsManager 的在场名单
     }
 
     /// <summary>
@@ -511,6 +755,8 @@ internal static class SpecialGuestTracking
             var presented = manager.AllPresentedGuestGroupController;
             if (presented == null) return;
 
+            // m05960：每轮刷新重建“本轮剩余食材”账本，加料按库存分配
+
             // 这一轮里还活着的稀客；扫完拿它反向剔除已经离店的
             var alive = new HashSet<string>(StringComparer.Ordinal);
             var scannedAny = false;
@@ -522,14 +768,38 @@ internal static class SpecialGuestTracking
                 var special = controller.TryCast<SpecialGuestsController>();
                 if (special == null || special.Pointer == IntPtr.Zero) continue;
 
+                // 最便宜的一道闸：确认这一组真的是稀客再往下走。
+                // 普通妖怪在这里就被跳过，连 Record() 里的标签读取与推荐计算都不会发生——这就是「零消耗」。
+                var peek = special.SpecialGuest;                                    // 组上的稀客对象
+                if (peek == null || peek.Pointer == IntPtr.Zero) continue;           // 空指针：不是稀客组
+                if (!IsSpecialGuestId(SafeInt(() => peek.Id), peek))                      // 映射表判定
+                {
+                    CountNonSpecialSkip();                                          // 只记个数
+                    continue;                                                       // 后面一概不算
+                }
+
+                // 【订单闸门】面板成员 = 游戏左下角「待上菜订单列表」的成员。
+                // IsOrdering 为 true 表示这一桌桌上还有没端上去的订单，正是会出现在订单列表里的那些；
+                // 菜端上去之后游戏把订单移出列表、IsOrdering 变 false，这里直接 continue，
+                // Record() 不再被调用、PruneAbsent() 把这一条从面板里剔掉 —— 面板与订单列表同进同出。
+                if (!SafeBool(() => controller.IsOrdering))                              // 没有待上菜的订单（已上菜，或还在看菜单）
+                {
+                    // m08050：这里**不再**发「自动翻页」信号。
+                    // 客人上菜/离店只是把名单刷新一遍，页码永远由玩家自己控制（滚轮 / ↑↓）。
+                    continue;                                                          // 本帧不再 Record，PruneAbsent 会把他剔掉
+                }
+
                 scannedAny = true;
-                var id = Record(special);
+                var id = Record(special);                                                // 采集（可能返回 null）
+                if (id != null) MarkSeated(id);                                          // m08014：确认在等单，才允许上板
                 if (!string.IsNullOrEmpty(id)) alive.Add(id);
             }
 
             if (!scannedAny) alive.Clear();
 
             PruneAbsent(alive);
+
+            LogPresentOnce();
         }
         catch (Exception ex)
         {
@@ -566,6 +836,14 @@ internal static class SpecialGuestTracking
         var junk = new[] { (char)0x27, '"', '`', (char)0x00B4, (char)0x2018, (char)0x2019, (char)0x201C, (char)0x201D, '*' };
         cleaned = cleaned.Trim(junk).Trim();
 
+        // 名字尾巴上孤零零的句号/逗号/顿号（面板里会单独占一行，看着像脏字符）
+        var punctuation = new[]
+        {
+            (char)0x3002, (char)0xFF0C, (char)0x3001, (char)0xFF1A, (char)0xFF1B, (char)0xFF1F, (char)0xFF01,
+            '.', ',', ';', ':', '!', '?', '-', '_',
+        };
+        cleaned = cleaned.Trim(punctuation).Trim();
+
         while (cleaned.Contains("  ")) cleaned = cleaned.Replace("  ", " ");
 
         return cleaned;
@@ -592,6 +870,17 @@ internal static class SpecialGuestTracking
         catch
         {
             return -1;
+        }
+    }
+
+    /// <summary>安全读 bool：IL2CPP 对象可能已销毁，任何异常都当作「没有」。</summary>
+    private static bool SafeBool(Func<bool> getter)                             // 入参：取值委托
+    {
+        try { return getter(); }                                                // 正常取值
+        catch (Exception ex)                                                    // 对象已销毁 / 类型不对
+        {
+            Diag.DbgSb(() => $"{HarmonyTag} 读 bool 失败（按 false 处理）：{ex.GetType().Name}"); // 只记调试日志
+            return false;                                                       // 当作没有
         }
     }
 

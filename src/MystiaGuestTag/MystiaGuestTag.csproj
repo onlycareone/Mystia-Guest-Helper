@@ -30,6 +30,11 @@
     <Reference Include="$(BepInExDir)\core\*.dll">
       <Private>false</Private>
     </Reference>
+    <!-- 游戏自带 coreclr 运行时里的 System.Text.Json（v1.3.0 读本地 JSON 用，不随插件分发） -->
+    <Reference Include="System.Text.Json">
+      <HintPath>$(GameDir)\dotnet\System.Text.Json.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <!-- Il2CppInterop 生成的游戏互操作程序集（首次启动游戏后出现在 interop/） -->
     <Reference Include="$(BepInExDir)\interop\*.dll">
       <Private>false</Private>

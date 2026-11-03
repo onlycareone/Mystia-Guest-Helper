@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using BepInEx;
 using BepInEx.Logging;
 using BepInEx.Unity.IL2CPP;
@@ -24,7 +24,7 @@ public class Plugin : BasePlugin
 {
     public const string PluginGuid = "cc.mystia.guesttag";
     public const string PluginName = "Mystia Guest Tag";
-    public const string PluginVersion = "1.2.3";
+    public const string PluginVersion = "2.8.4";
 
     internal static ManualLogSource Logger = null!;
 
@@ -35,9 +35,14 @@ public class Plugin : BasePlugin
 
         GuestTagConfig.Bind(Config);
 
+        // v1.3.0：一次性把 RecipeData.json / DrinkData.json / GuestPreferenceData.json 读进内存，
+        // 之后推荐只查内存字典（OnGUI 里不再遍历游戏对象，也不实时算）。
+                JsonDataStore.Load();
+
         var harmony = new Harmony(PluginGuid);
 
         // Hook 点 1：稀客生成（营业场景顾客生成逻辑）——本插件的主取数点
+        Diag.Verbose = GuestTagConfig.VerboseLog.Value;                     // 把日志开关交给诊断模块（默认 false）
         SpecialGuestTracking.Install(harmony);
 
         // Hook 点 2：营业场景的常驻 OnGUI —— 面板绘制点
@@ -47,6 +52,6 @@ public class Plugin : BasePlugin
         SpecialGuestExport.Install(harmony);
         SpecialGuestExport.TryExportOnce();
 
-        Logger.LogInfo($"{PluginName} 已就绪：面板顶部 [-]/[+] 调显示人数与菜/酒条数，下面一行 [策略: …] 循环切换低价优先/高价优先/少料易做（都立即写入 cfg）；鼠标在面板上滚轮翻页（到底回顶），按住标题栏可拖动，F10 隐藏/显示，F9 打开滑条版设置。");
+        Logger.LogInfo($"{PluginName} 已就绪：推荐走纯集合比对（{JsonDataStore.Status}），先按厌恶标签过滤，再按喜好命中数排序、价格升序；面板顶部 [-]/[+] 调显示人数与菜/酒条数，鼠标在面板上滚轮翻页，按住标题栏可拖动，F10 隐藏/显示，F9 打开滑条版设置。");
     }
 }

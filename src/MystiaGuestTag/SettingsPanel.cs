@@ -15,7 +15,7 @@ internal static class SettingsPanel
 
     /// <summary>窗口尺寸——高度按控件数量算死，省得 GUILayout 自适应用法踩坑。</summary>
     private const float WindowWidth = 380f;
-    private const float WindowHeight = 322f;
+    private const float WindowHeight = 268f;
     private const float TitleHeight = 30f;
     private const float Pad = 14f;
 
@@ -25,8 +25,7 @@ internal static class SettingsPanel
 
     // 编辑中的草稿值：点保存才写进 cfg，点取消直接丢弃
     private static int _maxGuests = 3;
-    private static int _maxRecipes = 3;
-    private static int _maxDrinks = 2;
+    private static int _maxCombos = 3;
 
     private static GUIStyle? _titleStyle;
     private static GUIStyle? _labelStyle;
@@ -72,8 +71,7 @@ internal static class SettingsPanel
 
         // 每次打开都从 cfg 读当前值，保证面板里看到的就是实际生效的
         _maxGuests = GuestTagConfig.GetMaxGuests();
-        _maxRecipes = GuestTagConfig.GetMaxRecipes();
-        _maxDrinks = GuestTagConfig.GetMaxDrinks();
+        _maxCombos = GuestTagConfig.GetCombos();
         _open = true;
     }
 
@@ -112,10 +110,9 @@ internal static class SettingsPanel
             GUILayout.Label("拖动滑条调整，点「保存并关闭」即时生效并写回 cfg。", _hintStyle);
             GUILayout.Space(8f);
 
-            // 上限跟 cfg 的 1~10 对齐：以前写死 8，玩家在 cfg 设 9/10 会被这里压回 8（P1-5）
+            // 套餐模式：菜品+酒水合成「套餐」，上限 3（游戏里稀客一般一道菜配一杯酒）
             _maxGuests = Slider("最多显示稀客", _maxGuests, 1, 10);
-            _maxRecipes = Slider("每人最多推荐菜品", _maxRecipes, 1, 10);
-            _maxDrinks = Slider("每人最多推荐酒水", _maxDrinks, 1, 10);
+            _maxCombos = Slider("每人推荐套餐数", _maxCombos, 1, 3);
 
             GUILayout.Space(12f);
             GUILayout.BeginHorizontal();
@@ -160,13 +157,13 @@ internal static class SettingsPanel
     {
         try
         {
-            GuestTagConfig.ApplyDisplaySettings(_maxGuests, _maxRecipes, _maxDrinks);
+            GuestTagConfig.ApplyDisplaySettings(_maxGuests, _maxCombos);
 
             // 推荐结果是按 stringId 缓存的，条数变了要立刻重算，不然要等 30 秒
-            RecipeRecommender.ClearCache();
+            SetMatchRecommender.ClearCache();
 
             Plugin.Logger.LogInfo(
-                $"{HarmonyTag} 设置已保存：显示稀客 {_maxGuests} 位，每人菜品 {_maxRecipes} 条、酒水 {_maxDrinks} 条");
+                $"{HarmonyTag} 设置已保存：显示稀客 {_maxGuests} 位，每人推荐 {_maxCombos} 个套餐");
         }
         catch (Exception ex)
         {
