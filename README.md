@@ -51,6 +51,37 @@ Touhou Mystia Izakaya/
 3. 还不行：把 `LogOutput.log` 提到 issue 里，说明游戏版本（目前适配 4.4.0e）。
 4. 想彻底卸载：删掉 `BepInEx\plugins\GuestTag.dll` 就行，其余文件不影响游戏。
 
+### 情况 D：启动后多出一个黑色控制台窗口
+
+那是 **BepInEx 自己的控制台**，不是插件弹的，也不是报错。BepInEx 默认 `[Logging.Console] Enabled = true` 就会开一个黑窗。
+
+**关键：这个黑窗和游戏是同一个进程，点它的 × 关掉就等于关掉游戏**（看起来就像「玩着玩着闪退」）。
+
+不想看到它，两种办法：
+
+1. **别关它**，最小化就行（它只是实时日志）。
+2. **永久关掉**：用记事本打开
+
+   ```
+   <游戏根目录>\BepInEx\config\BepInEx.cfg
+   ```
+
+   找到 `[Logging.Console]` 这一段，把
+
+   ```ini
+   Enabled = true
+   ```
+
+   改成
+
+   ```ini
+   Enabled = false
+   ```
+
+   保存后重新启动游戏，黑窗就没了。日志照样写在 `BepInEx/LogOutput.log` 里，排查问题时看这个文件就行。
+
+> 顺带一提：`[Logging.Console]` 里还有一个 `PreventClose`，改成 `true` 可以**把 × 按钮禁用**，防止手滑关掉游戏——适合给容易误点的朋友。
+
 ## 目录
 
 ```
